@@ -322,7 +322,8 @@ const m_option_t mp_opts[] = {
 
 #ifdef CONFIG_STREAM_CACHE
     OPT_CHOICE_OR_INT("cache", stream_cache_size, 0, 32, 0x7fffffff,
-                      ({"no", -1}),
+                      ({"no", 0},
+                       {"auto", -1}),
                       OPTDEF_INT(-1)),
     OPT_FLOATRANGE("cache-min", stream_cache_min_percent, 0, 0, 99),
     OPT_FLOATRANGE("cache-seek-min", stream_cache_seek_min_percent, 0, 0, 99),
@@ -543,8 +544,6 @@ const m_option_t mp_opts[] = {
                 {"no", 0},
                 {"yes", 1}, {"", 1})),
     OPT_FLAG("gapless-audio", gapless_audio, 0),
-    // override audio buffer size (used only by -ao oss/win32, obsolete)
-    OPT_INT("abs", ao_buffersize, 0),
 
     // set screen dimensions (when not detectable or virtual!=visible)
     OPT_INTRANGE("screenw", vo.screenwidth, CONF_GLOBAL, 0, 4096),
@@ -587,10 +586,10 @@ const m_option_t mp_opts[] = {
 
     OPT_CHOICE_OR_INT("cursor-autohide", vo.cursor_autohide_delay, 0,
                       0, 30000, ({"no", -1}, {"always", -2})),
+    OPT_FLAG("stop-screensaver", stop_screensaver, 0),
 
     OPT_INT64("wid", vo.WinID, CONF_GLOBAL),
 #ifdef CONFIG_X11
-    OPT_FLAG("stop-xscreensaver", vo.stop_screensaver, 0),
     OPT_STRINGLIST("fstype", vo.fstype_list, 0),
 #endif
     OPT_STRING("heartbeat-cmd", heartbeat_cmd, 0),
@@ -734,7 +733,6 @@ const struct MPOpts mp_default_opts = {
     .mixer_init_volume = -1,
     .mixer_init_mute = -1,
     .volstep = 3,
-    .ao_buffersize = -1,
     .vo = {
         .video_driver_list = NULL,
         .cursor_autohide_delay = 1000,
@@ -743,7 +741,6 @@ const struct MPOpts mp_default_opts = {
         .fs = false,
         .screen_id = -1,
         .fsscreen_id = -1,
-        .stop_screensaver = 1,
         .nomouse_input = 0,
         .enable_mouse_movements = 1,
         .fsmode = 0,
@@ -756,6 +753,7 @@ const struct MPOpts mp_default_opts = {
     },
     .wintitle = "mpv - ${media-title}",
     .heartbeat_interval = 30.0,
+    .stop_screensaver = 1,
     .gamma_gamma = 1000,
     .gamma_brightness = 1000,
     .gamma_contrast = 1000,
