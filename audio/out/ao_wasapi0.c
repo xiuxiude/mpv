@@ -30,6 +30,7 @@
 #include "core/subopt-helper.h"
 #include "audio/format.h"
 #include "core/mp_msg.h"
+#include "core/mp_ring.h"
 #include "ao.h"
 
 #define RING_BUFFER_COUNT 64
@@ -75,17 +76,13 @@ typedef struct wasapi0_state {
     CRITICAL_SECTION print_lock;
 
     /* Buffers */
-    CRITICAL_SECTION buffer_lock;
+    struct mp_ring *ringbuff;
     size_t buffer_block_size; /* Size of each block in bytes */
-    LONG read_block_ptr, write_block_ptr; /*Which block are we in?*/
-    LONG write_ahead_count; /* how many blocks writer is ahead of reader? should be less than RING_BUFFER_COUNT*/
-    uintptr_t write_offset; /*offset while writing partial blocks, used only in main thread */
     REFERENCE_TIME
     minRequestedDuration; /* minimum wasapi buffer block size, in 100-nanosecond units */
     REFERENCE_TIME
     defaultRequestedDuration; /* default wasapi default block size, in 100-nanosecond units */
     UINT32 bufferFrameCount; /* wasapi buffer block size, number of frames, frame size at format.nBlockAlign */
-    void *ring_buffer[RING_BUFFER_COUNT]; /* each bufferFrameCount sized, owned by main thread */
 
     /* WASAPI handles, owned by other thread */
     IMMDeviceEnumerator *pEnumerator;
@@ -306,7 +303,6 @@ static int fix_format(struct wasapi0_state* state)
     /* cargo cult code to negotiate buffer block size, affected by hardware/drivers combinations,
        gradually grow it to 10s, by 0.5s, consider failure if it still doesn't work
     */
-    EnterCriticalSection(&state->buffer_lock);
     hr = IAudioClient_GetDevicePeriod(state->pAudioClient,
                                       &state->defaultRequestedDuration, &state->minRequestedDuration);
 reinit:
@@ -348,14 +344,12 @@ reinit:
     EXIT_ON_ERROR(hr)
     state->buffer_block_size = state->format.Format.nBlockAlign *
                                state->bufferFrameCount;
-    LeaveCriticalSection(&state->buffer_lock);
     state->hTask = state->VistaBlob.pAvSetMmThreadCharacteristicsW(L"Pro Audio",
                    &state->taskIndex);
     EnterCriticalSection(&state->print_lock);
     mp_msg(MSGT_AO, MSGL_V,
            "ao-wasapi: fix_format OK, using %lld byte buffer block size!\n",
            state->buffer_block_size);
-    LeaveCriticalSection(&state->print_lock);
     return 0;
 exit_label:
     EnterCriticalSection(&state->print_lock);
@@ -363,7 +357,6 @@ exit_label:
            "ao-wasapi: fix_format fails with %s, failed to determine buffer block size!\n",
            explain_err(hr));
     LeaveCriticalSection(&state->print_lock);
-    LeaveCriticalSection(&state->buffer_lock);
     SetEvent(state->fatal_error);
     return 1;
 }
@@ -422,22 +415,22 @@ static void thread_reset(wasapi0_state *state)
     IAudioClient_Reset(state->pAudioClient);
 }
 
-static void thread_feed(wasapi0_state *state)
+/* force_feed - feed in even if available data is smaller than required buffer, to clear the buffer */
+static void thread_feed(wasapi0_state *state,int force_feed)
 {
     BYTE *pData;
+    int buffer_size;
     HRESULT hr = IAudioRenderClient_GetBuffer(state->pRenderClient,
                  state->bufferFrameCount, &pData);
     EXIT_ON_ERROR(hr)
-    EnterCriticalSection(&state->buffer_lock);
-    if(state->write_ahead_count > 0) { /* OK to copy! */
-        memcpy(pData,state->ring_buffer[state->read_block_ptr],
-               state->buffer_block_size);
-        state->read_block_ptr++;
-        state->read_block_ptr = state->read_block_ptr % RING_BUFFER_COUNT;
-        state->write_ahead_count--;
-        LeaveCriticalSection(&state->buffer_lock);
+    buffer_size = mp_ring_buffered(state->ringbuff);
+    if( buffer_size > state->buffer_block_size) { /* OK to copy! */
+        mp_ring_read(state->ringbuff,(unsigned char *)pData, state->buffer_block_size);
+    } else if(force_feed) {
+        /* should be smaller than buffer block size by now */
+        memset(pData,0,state->buffer_block_size);
+        mp_ring_read(state->ringbuff,(unsigned char *)pData,buffer_size);
     } else {
-        LeaveCriticalSection(&state->buffer_lock);
         /* buffer underrun?! abort */
         hr = IAudioRenderClient_ReleaseBuffer(state->pRenderClient,
                                               state->bufferFrameCount, AUDCLNT_BUFFERFLAGS_SILENT);
@@ -456,7 +449,7 @@ exit_label:
 
 static void thread_play(wasapi0_state *state)
 {
-    thread_feed(state);
+    thread_feed(state,0);
     IAudioClient_Start(state->pAudioClient);
     return;
 }
@@ -480,11 +473,9 @@ static void thread_uninit(wasapi0_state *state)
     if(!state->immed) {
         /* feed until empty */
         while(1) {
-            EnterCriticalSection(&state->buffer_lock);
-            LONG ahead = state->write_ahead_count;
-            LeaveCriticalSection(&state->buffer_lock);
-            if(WaitForSingleObject(state->hFeed,2000) == WAIT_OBJECT_0 && ahead) {
-                thread_feed(state);
+            if(WaitForSingleObject(state->hFeed,2000) == WAIT_OBJECT_0
+                    && mp_ring_buffered(state->ringbuff)) {
+                thread_feed(state,1);
             } else break;
         }
     }
@@ -543,7 +534,7 @@ static unsigned int __stdcall ThreadLoop(void *lpParameter)
             break;
         case (WAIT_OBJECT_0+6): /* feed */
             feedwatch = 1;
-            thread_feed(state);
+            thread_feed(state,0);
             break;
         case WAIT_TIMEOUT: /* Did our feed die? */
             if(feedwatch) return -1;
@@ -573,49 +564,20 @@ static void closehandles(struct ao *ao)
 
 static int get_space(struct ao *ao)
 {
-    int ret = 0;
     if(!ao || !ao->priv) return -1;
     struct wasapi0_state* state = (struct wasapi0_state *)ao->priv;
-    EnterCriticalSection(&state->buffer_lock);
-    LONG ahead = state->write_ahead_count;
-    size_t block_size = state->buffer_block_size;
-    LeaveCriticalSection(&state->buffer_lock);
-    ret = (RING_BUFFER_COUNT - ahead) * block_size; /* rough */
-    return (ret - (block_size -
-                   state->write_offset)); /* take offset into account */
+    return mp_ring_available(state->ringbuff);
 }
 
 static void reset_buffers(struct wasapi0_state* state)
 {
-    EnterCriticalSection(&state->buffer_lock);
-    state->read_block_ptr = state->write_block_ptr = 0;
-    state->write_ahead_count = 0;
-    state->write_offset = 0;
-    LeaveCriticalSection(&state->buffer_lock);
-}
-
-static void free_buffers(struct wasapi0_state* state)
-{
-    int iter;
-    for(iter = 0; iter < RING_BUFFER_COUNT; iter++) {
-        if(state->ring_buffer[iter]) free(
-                state->ring_buffer[iter]); /* msvcr* free can't handle null properly */
-        state->ring_buffer[iter] = NULL;
-    }
+    mp_ring_reset(state->ringbuff);
 }
 
 static int setup_buffers(struct wasapi0_state* state)
 {
-    int iter;
-    reset_buffers(state);
-    for(iter = 0; iter < RING_BUFFER_COUNT; iter++) {
-        state->ring_buffer[iter] = malloc(state->buffer_block_size);
-        if(!state->ring_buffer[iter]) {
-            free_buffers(state);
-            return 1; /* failed */
-        }
-    }
-    return 0;
+    state->ringbuff = mp_ring_new(state,RING_BUFFER_COUNT*state->buffer_block_size);
+    return !state->ringbuff;
 }
 
 static void uninit(struct ao *ao, bool immed)
@@ -630,9 +592,7 @@ static void uninit(struct ao *ao, bool immed)
     }
     if(state->VistaBlob.hAvrt)
         FreeLibrary(state->VistaBlob.hAvrt);
-    free_buffers(state);
     closehandles(ao);
-    DeleteCriticalSection(&state->buffer_lock);
     DeleteCriticalSection(&state->print_lock);
     talloc_free(state);
     ao->priv = NULL;
@@ -660,7 +620,7 @@ static int init(struct ao *ao, char *params)
     state->hUninit = CreateEventW(NULL,FALSE,FALSE,NULL);
     state->fatal_error = CreateEventW(NULL,TRUE,FALSE,NULL);
     state->hFeed = CreateEvent(NULL,FALSE,FALSE,NULL); /* for wasapi event mode */
-    InitializeCriticalSection(&state->buffer_lock);
+
     InitializeCriticalSection(&state->print_lock);
     if(!state->init_done || !state->fatal_error || !state->hPlay || !state->hPause
             || !state->hFeed || !state->hReset || !state->hGetvol || !state->hSetvol
@@ -739,7 +699,6 @@ static void reset(struct ao *ao)
 static int play(struct ao *ao, void *data, int len, int flags)
 {
     int ret = 0;
-    unsigned char *dat = data;
     if(!ao || !ao->priv) return ret;
     struct wasapi0_state* state = (struct wasapi0_state *)ao->priv;
     if(WaitForSingleObject(state->fatal_error,0) == WAIT_OBJECT_0) {
@@ -747,25 +706,7 @@ static int play(struct ao *ao, void *data, int len, int flags)
         return ret;
     }
 
-    /* round to nearest block size? */
-    EnterCriticalSection(&state->buffer_lock);
-    while((RING_BUFFER_COUNT - 1 ) >
-            state->write_ahead_count) { /* make sure write ahead does not bust buffer count */
-        if((len - ret) >
-                state->buffer_block_size) { /* data left is larger than block size, do block by block copy */
-            memcpy(state->ring_buffer[state->write_block_ptr], &dat[ret],
-                   state->buffer_block_size);
-        } else if (flags & AOPLAY_FINAL_CHUNK) {
-            /* zero out and fill with whatever that is left, but only if it is final block */
-            memset(state->ring_buffer[state->write_block_ptr],0,state->buffer_block_size);
-            memcpy(state->ring_buffer[state->write_block_ptr], &dat[ret], (len - ret));
-        } else break; /* otherwise leave buffers outside of block alignment and let player figure it out */
-        state->write_block_ptr ++;
-        state->write_block_ptr %= RING_BUFFER_COUNT;
-        state->write_ahead_count++;
-        ret += state->buffer_block_size;
-    }
-    LeaveCriticalSection(&state->buffer_lock);
+    ret = mp_ring_write(state->ringbuff,data,len);
 
     if(!state->is_playing) {
         /* start playing */
