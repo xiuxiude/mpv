@@ -71,13 +71,14 @@ enum demuxer_type {
     DEMUXER_TYPE_MNG,
     DEMUXER_TYPE_EDL,
     DEMUXER_TYPE_CUE,
+    DEMUXER_TYPE_SUBREADER,
+    DEMUXER_TYPE_LIBASS,
 
     /* Values after this are for internal use and can not be selected
      * as demuxer type by the user (-demuxer option). */
     DEMUXER_TYPE_END,
 
     DEMUXER_TYPE_PLAYLIST,
-    DEMUXER_TYPE_SUB,
 };
 
 enum timestamp_type {
@@ -92,6 +93,7 @@ enum timestamp_type {
 #define DEMUXER_CTRL_OK 1
 #define DEMUXER_CTRL_GUESS 2
 
+#define DEMUXER_CTRL_UPDATE_INFO 8
 #define DEMUXER_CTRL_SWITCHED_TRACKS 9
 #define DEMUXER_CTRL_GET_TIME_LENGTH 10
 #define DEMUXER_CTRL_GET_START_TIME 11
@@ -216,6 +218,7 @@ struct demuxer_params {
     unsigned char (*matroska_wanted_uids)[16];
     int matroska_wanted_segment;
     bool *matroska_was_valid;
+    struct ass_library *ass_library;
 };
 
 typedef struct demuxer {
@@ -291,6 +294,7 @@ struct demux_packet *new_demux_packet_fromdata(void *data, size_t len);
 struct demux_packet *new_demux_packet_from(void *data, size_t len);
 void resize_demux_packet(struct demux_packet *dp, size_t len);
 void free_demux_packet(struct demux_packet *dp);
+struct demux_packet *demux_copy_packet(struct demux_packet *dp);
 
 #ifndef SIZE_MAX
 #define SIZE_MAX ((size_t)-1)
@@ -305,13 +309,10 @@ static inline void *realloc_struct(void *ptr, size_t nmemb, size_t size)
     return realloc(ptr, nmemb * size);
 }
 
-demuxer_t *new_sub_pseudo_demuxer(struct MPOpts *opts);
-
-
 void free_demuxer(struct demuxer *demuxer);
 
-void demuxer_add_packet(demuxer_t *demuxer, struct sh_stream *stream,
-                        demux_packet_t *dp);
+int demuxer_add_packet(demuxer_t *demuxer, struct sh_stream *stream,
+                       demux_packet_t *dp);
 void ds_add_packet(struct demux_stream *ds, struct demux_packet *dp);
 void ds_read_packet(struct demux_stream *ds, struct stream *stream, int len,
                     double pts, int64_t pos, bool keyframe);
@@ -385,6 +386,8 @@ int demux_info_add_bstr(struct demuxer *demuxer, struct bstr opt,
                         struct bstr param);
 char *demux_info_get(struct demuxer *demuxer, const char *opt);
 int demux_info_print(struct demuxer *demuxer);
+void demux_info_update(struct demuxer *demuxer);
+
 int demux_control(struct demuxer *demuxer, int cmd, void *arg);
 
 void demuxer_switch_track(struct demuxer *demuxer, enum stream_type type,
@@ -424,5 +427,12 @@ struct sh_stream *demuxer_stream_by_demuxer_id(struct demuxer *d,
                                                enum stream_type t, int id);
 
 bool demuxer_stream_is_selected(struct demuxer *d, struct sh_stream *stream);
+
+void demux_packet_list_sort(struct demux_packet **pkts, int num_pkts);
+void demux_packet_list_seek(struct demux_packet **pkts, int num_pkts,
+                            int *current, float rel_seek_secs, int flags);
+double demux_packet_list_duration(struct demux_packet **pkts, int num_pkts);
+struct demux_packet *demux_packet_list_fill(struct demux_packet **pkts,
+                                            int num_pkts, int *current);
 
 #endif /* MPLAYER_DEMUXER_H */

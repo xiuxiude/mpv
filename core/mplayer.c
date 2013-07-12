@@ -68,10 +68,9 @@
 
 #include "core/m_option.h"
 #include "core/m_config.h"
-#include "core/mplayer.h"
+#include "core/resolve.h"
 #include "core/m_property.h"
 
-#include "sub/subreader.h"
 #include "sub/find_subfiles.h"
 #include "sub/dec_sub.h"
 #include "sub/sd.h"
@@ -186,7 +185,6 @@ static const char av_desync_help_text[] = _(
 //**************************************************************************//
 //**************************************************************************//
 
-#include "core/mp_fifo.h"
 #include "sub/ass_mp.h"
 
 
@@ -197,9 +195,6 @@ static const char av_desync_help_text[] = _(
 
 static void reset_subtitles(struct MPContext *mpctx);
 static void reinit_subs(struct MPContext *mpctx);
-static struct track *open_external_file(struct MPContext *mpctx, char *filename,
-                                        char *demuxer_name, int stream_cache,
-                                        enum stream_type filter);
 
 static double get_relative_time(struct MPContext *mpctx)
 {
@@ -592,8 +587,6 @@ static MP_NORETURN void exit_player(struct MPContext *mpctx,
     mpctx->ass_library = NULL;
 #endif
 
-    talloc_free(mpctx->key_fifo);
-
     if (how != EXIT_NONE) {
         const char *reason;
         switch (how) {
@@ -982,6 +975,9 @@ static struct track *add_stream_track(struct MPContext *mpctx,
     };
     MP_TARRAY_APPEND(mpctx, mpctx->tracks, mpctx->num_tracks, track);
 
+    if (stream->type == STREAM_SUB)
+        track->preloaded = !!stream->sub->track;
+
     // Needed for DVD and Blu-ray.
     if (!track->lang) {
         struct stream_lang_req req = {
@@ -1026,69 +1022,6 @@ static void add_dvd_tracks(struct MPContext *mpctx)
         }
     }
 #endif
-}
-
-#ifdef CONFIG_ASS
-static int free_sub_data(void *ptr)
-{
-    struct sh_sub *sh_sub = *(struct sh_sub **)ptr;
-    if (sh_sub->track)
-        ass_free_track(sh_sub->track);
-    talloc_free(sh_sub->sub_data);
-    return 1;
-}
-#endif
-
-struct track *mp_add_subtitles(struct MPContext *mpctx, char *filename,
-                               float fps, int noerr)
-{
-    struct MPOpts *opts = &mpctx->opts;
-    struct ass_track *asst = NULL;
-    sub_data *subd = NULL;
-
-    if (filename == NULL)
-        return NULL;
-
-    // Note: no text subtitles without libass. This is mainly because sd_ass is
-    // used for rendering. Even when showing subtitles with term-osd, going
-    // through sd_ass makes the code much simpler, as sd_ass can handle all
-    // the weird special-cases.
-#ifdef CONFIG_ASS
-    asst = mp_ass_read_stream(mpctx->ass_library, filename, opts->sub_cp);
-    if (!asst)
-        subd = sub_read_file(filename, fps, &mpctx->opts);
-    if (asst || subd) {
-        struct demuxer *d = new_sub_pseudo_demuxer(opts);
-        assert(d->num_streams == 1);
-        struct sh_stream *s = d->streams[0];
-        assert(s->type == STREAM_SUB);
-
-        s->codec = asst ? "ass" : subd->codec;
-        s->sub->track = asst;
-        s->sub->sub_data = subd;
-
-        struct sh_sub **pptr = talloc(d, struct sh_sub*);
-        *pptr = s->sub;
-        talloc_set_destructor(pptr, free_sub_data);
-
-        struct track *t = add_stream_track(mpctx, s, false);
-        t->is_external = true;
-        t->preloaded = true;
-        t->title = talloc_strdup(t, filename);
-        t->external_filename = talloc_strdup(t, filename);
-        MP_TARRAY_APPEND(NULL, mpctx->sources, mpctx->num_sources, d);
-        return t;
-    }
-#endif
-
-    // Used with libavformat subtitles.
-    struct track *ext = open_external_file(mpctx, filename, NULL, 0, STREAM_SUB);
-    if (ext)
-        return ext;
-
-    mp_tmsg(MSGT_CPLAYER, noerr ? MSGL_WARN : MSGL_ERR,
-            "Cannot load subtitles: %s\n", filename);
-    return NULL;
 }
 
 int mp_get_cache_percent(struct MPContext *mpctx)
@@ -1229,19 +1162,10 @@ static void print_status(struct MPContext *mpctx)
     }
 
 #ifdef CONFIG_ENCODING
-    double startpos = rel_time_to_abs(mpctx, opts->play_start, 0);
-    double endpos = rel_time_to_abs(mpctx, opts->play_end, -1);
-    float position = (get_current_time(mpctx) - startpos) /
-                     (get_time_length(mpctx) - startpos);
-    if (endpos != -1)
-        position = max(position, (get_current_time(mpctx) - startpos)
-                               / (endpos - startpos));
-    if (opts->play_frames > 0)
-        position = max(position,
-                       1.0 - mpctx->max_frames / (double) opts->play_frames);
+    double position = get_current_pos_ratio(mpctx, true);
     char lavcbuf[80];
     if (encode_lavc_getstatus(mpctx->encode_lavc_ctx, lavcbuf, sizeof(lavcbuf),
-            position, get_current_time(mpctx) - startpos) >= 0)
+            position) >= 0)
     {
         // encoding stats
         saddf(&line, " %s", lavcbuf);
@@ -1576,7 +1500,7 @@ static void add_seek_osd_messages(struct MPContext *mpctx)
 {
     if (mpctx->add_osd_seek_info & OSD_SEEK_INFO_BAR) {
         set_osd_bar(mpctx, OSD_BAR_SEEK, "Position", 0, 1,
-                    av_clipf(get_current_pos_ratio(mpctx), 0, 1));
+                    av_clipf(get_current_pos_ratio(mpctx, false), 0, 1));
         set_osd_bar_chapters(mpctx, OSD_BAR_SEEK);
     }
     if (mpctx->add_osd_seek_info & OSD_SEEK_INFO_TEXT) {
@@ -1617,7 +1541,7 @@ static void update_osd_msg(struct MPContext *mpctx)
 
     add_seek_osd_messages(mpctx);
     update_osd_bar(mpctx, OSD_BAR_SEEK, 0, 1,
-                   av_clipf(get_current_pos_ratio(mpctx), 0, 1));
+                   av_clipf(get_current_pos_ratio(mpctx, false), 0, 1));
 
     // Look if we have a msg
     mp_osd_msg_t *msg = get_osd_msg(mpctx);
@@ -1855,12 +1779,10 @@ static void update_subtitles(struct MPContext *mpctx, double refpts_tl)
     assert(track && sh_sub);
     struct dec_sub *dec_sub = sh_sub->dec_sub;
 
-    double video_offset = track->under_timeline ? mpctx->video_offset : 0;
+    mpctx->osd->video_offset = track->under_timeline ? mpctx->video_offset : 0;
 
-    mpctx->osd->sub_offset = video_offset - opts->sub_delay;
-
-    double curpts_s = refpts_tl - mpctx->osd->sub_offset;
-    double refpts_s = refpts_tl - video_offset;
+    double refpts_s = refpts_tl - mpctx->osd->video_offset;
+    double curpts_s = refpts_s + opts->sub_delay;
 
     if (!track->preloaded) {
         struct demux_stream *d_sub = sh_sub->ds;
@@ -2010,7 +1932,8 @@ static void reinit_subs(struct MPContext *mpctx)
     if (!mpctx->sh_sub->dec_sub)
         mpctx->sh_sub->dec_sub = sub_create(opts);
 
-    if (track->demuxer && !track->stream) {
+    assert(track->demuxer);
+    if (!track->stream) {
         // Lazily added DVD track - we must not miss the first subtitle packet,
         // which makes the demuxer create the sh_stream, and contains the first
         // subtitle event.
@@ -2025,7 +1948,6 @@ static void reinit_subs(struct MPContext *mpctx)
 
         return;
     }
-    assert(track->demuxer && track->stream);
 
     mpctx->initialized_flags |= INITIALIZED_SUB;
 
@@ -2036,12 +1958,22 @@ static void reinit_subs(struct MPContext *mpctx)
     if (!sub_is_initialized(dec_sub)) {
         int w = mpctx->sh_video ? mpctx->sh_video->disp_w : 0;
         int h = mpctx->sh_video ? mpctx->sh_video->disp_h : 0;
+        float fps = mpctx->sh_video ? mpctx->sh_video->fps : 25;
 
         set_dvdsub_fake_extradata(dec_sub, track->demuxer->stream, w, h);
         sub_set_video_res(dec_sub, w, h);
+        sub_set_video_fps(dec_sub, fps);
         sub_set_ass_renderer(dec_sub, mpctx->osd->ass_library,
                              mpctx->osd->ass_renderer);
         sub_init_from_sh(dec_sub, sh_sub);
+
+        // Don't do this if the file has video/audio streams. Don't do it even
+        // if it has only sub streams, because reading packets will change the
+        // demuxer position.
+        if (!track->preloaded && track->is_external) {
+            demux_seek(track->demuxer, 0, 0, SEEK_ABSOLUTE);
+            track->preloaded = sub_read_all_packets(dec_sub, sh_sub);
+        }
     }
 
     mpctx->osd->dec_sub = dec_sub;
@@ -2449,9 +2381,8 @@ int reinit_video_chain(struct MPContext *mpctx)
     double ar = -1.0;
     //================== Init VIDEO (codec & libvo) ==========================
     if (!opts->fixed_vo || !(mpctx->initialized_flags & INITIALIZED_VO)) {
-        mpctx->video_out
-            = init_best_video_out(&opts->vo, mpctx->key_fifo, mpctx->input,
-                                  mpctx->encode_lavc_ctx);
+        mpctx->video_out = init_best_video_out(&opts->vo, mpctx->input,
+                                               mpctx->encode_lavc_ctx);
         if (!mpctx->video_out) {
             mp_tmsg(MSGT_CPLAYER, MSGL_FATAL, "Error opening/initializing "
                     "the selected video_out (-vo) device.\n");
@@ -2792,6 +2723,8 @@ static bool redraw_osd(struct MPContext *mpctx)
     if (vo_redraw_frame(vo) < 0)
         return false;
 
+    if (mpctx->sh_video)
+        update_subtitles(mpctx, mpctx->sh_video->pts);
     draw_osd(mpctx);
 
     vo_flip_page(vo, 0, -1);
@@ -3146,7 +3079,7 @@ double get_start_time(struct MPContext *mpctx)
 }
 
 // Return playback position in 0.0-1.0 ratio, or -1 if unknown.
-double get_current_pos_ratio(struct MPContext *mpctx)
+double get_current_pos_ratio(struct MPContext *mpctx, bool use_range)
 {
     struct demuxer *demuxer = mpctx->demuxer;
     if (!demuxer)
@@ -3154,6 +3087,19 @@ double get_current_pos_ratio(struct MPContext *mpctx)
     double ans = -1;
     double start = get_start_time(mpctx);
     double len = get_time_length(mpctx);
+    if (use_range) {
+        double startpos = rel_time_to_abs(mpctx, mpctx->opts.play_start,
+                MP_NOPTS_VALUE);
+        double endpos = get_play_end_pts(mpctx);
+        if (endpos == MP_NOPTS_VALUE || endpos > start + len)
+            endpos = start + len;
+        if (startpos == MP_NOPTS_VALUE || startpos < start)
+            startpos = start;
+        if (endpos < startpos)
+            endpos = startpos;
+        start = startpos;
+        len = endpos - startpos;
+    }
     double pos = get_current_time(mpctx);
     if (len > 0 && !demuxer->ts_resets_possible) {
         ans = av_clipf((pos - start) / len, 0, 1);
@@ -3164,12 +3110,17 @@ double get_current_pos_ratio(struct MPContext *mpctx)
         if (len > 0)
             ans = av_clipf((double)(pos - demuxer->movi_start) / len, 0, 1);
     }
+    if (use_range) {
+        if (mpctx->opts.play_frames > 0)
+            ans = max(ans, 1.0 -
+                    mpctx->max_frames / (double) mpctx->opts.play_frames);
+    }
     return ans;
 }
 
 int get_percent_pos(struct MPContext *mpctx)
 {
-    return av_clip(get_current_pos_ratio(mpctx) * 100, 0, 100);
+    return av_clip(get_current_pos_ratio(mpctx, false) * 100, 0, 100);
 }
 
 // -2 is no chapters, -1 is before first chapter
@@ -3423,7 +3374,7 @@ static void run_playloop(struct MPContext *mpctx)
         // ================================================================
         vo_check_events(vo);
 
-        double mouse_event_ts = mp_input_get_mouse_event_counter(mpctx->input);
+        unsigned mouse_event_ts = mp_input_get_mouse_event_counter(mpctx->input);
         if (mpctx->mouse_event_ts != mouse_event_ts) {
             mpctx->mouse_event_ts = mouse_event_ts;
             if (opts->vo.cursor_autohide_delay > -1) {
@@ -3688,6 +3639,11 @@ static void run_playloop(struct MPContext *mpctx)
             mp_input_get_cmd(mpctx->input, sleeptime * 1000, true);
     }
 
+    if (mp_time_sec() > mpctx->last_metadata_update + 2) {
+        demux_info_update(mpctx->demuxer);
+        mpctx->last_metadata_update = mp_time_sec();
+    }
+
     //================= Keyboard events, SEEKing ====================
 
     handle_pause_on_low_cache(mpctx);
@@ -3774,13 +3730,6 @@ static void run_playloop(struct MPContext *mpctx)
     }
 
     execute_queued_seek(mpctx);
-}
-
-static int read_keys(void *ctx, int fd)
-{
-    if (getch2(ctx))
-        return MP_INPUT_NOTHING;
-    return MP_INPUT_DEAD;
 }
 
 static bool attachment_is_font(struct demux_attachment *att)
@@ -3889,20 +3838,25 @@ static void check_previous_track_selection(struct MPContext *mpctx)
     talloc_free(h);
 }
 
+static int read_keys(void *ctx, int fd)
+{
+    if (getch2(ctx))
+        return MP_INPUT_NOTHING;
+    return MP_INPUT_DEAD;
+}
+
 static void init_input(struct MPContext *mpctx)
 {
     mpctx->input = mp_input_init(&mpctx->opts.input, mpctx->opts.load_config);
-    mpctx->key_fifo = mp_fifo_create(mpctx->input, &mpctx->opts);
     if (mpctx->opts.slave_mode)
         mp_input_add_cmd_fd(mpctx->input, 0, USE_FD0_CMD_SELECT, MP_INPUT_SLAVE_CMD_FUNC, NULL);
     else if (mpctx->opts.consolecontrols)
-        mp_input_add_key_fd(mpctx->input, 0, 1, read_keys, NULL, mpctx->key_fifo);
+        mp_input_add_key_fd(mpctx->input, 0, 1, read_keys, NULL, mpctx->input);
     // Set the libstream interrupt callback
     stream_set_interrupt_callback(mp_input_check_interrupt, mpctx->input);
 
 #ifdef CONFIG_COCOA
     cocoa_set_input_context(mpctx->input);
-    cocoa_set_key_fifo(mpctx->key_fifo);
 #endif
 }
 
@@ -3911,16 +3865,15 @@ static void open_subtitles_from_options(struct MPContext *mpctx)
     // after reading video params we should load subtitles because
     // we know fps so now we can adjust subtitle time to ~6 seconds AST
     // check .sub
-    double sub_fps = mpctx->sh_video ? mpctx->sh_video->fps : 25;
     if (mpctx->opts.sub_name) {
         for (int i = 0; mpctx->opts.sub_name[i] != NULL; ++i)
-            mp_add_subtitles(mpctx, mpctx->opts.sub_name[i], sub_fps, 0);
+            mp_add_subtitles(mpctx, mpctx->opts.sub_name[i], 0);
     }
     if (mpctx->opts.sub_auto) { // auto load sub file ...
         char **tmp = find_text_subtitles(&mpctx->opts, mpctx->filename);
         int nsub = MP_TALLOC_ELEMS(tmp);
         for (int i = 0; i < nsub; i++) {
-            struct track *track = mp_add_subtitles(mpctx, tmp[i], sub_fps, 1);
+            struct track *track = mp_add_subtitles(mpctx, tmp[i], 1);
             if (track)
                 track->auto_loaded = true;
         }
@@ -3936,10 +3889,14 @@ static struct track *open_external_file(struct MPContext *mpctx, char *filename,
     if (!filename)
         return NULL;
     int format = 0;
+    char *disp_filename = filename;
+    if (strncmp(disp_filename, "memory://", 9) == 0)
+        disp_filename = "memory://"; // avoid noise
     struct stream *stream = open_stream(filename, &mpctx->opts, &format);
     if (!stream)
         goto err_out;
     stream_enable_cache_percent(&stream, stream_cache,
+                                opts->stream_cache_def_size,
                                 opts->stream_cache_min_percent,
                                 opts->stream_cache_seek_min_percent);
     // deal with broken demuxers: preselect streams
@@ -3950,9 +3907,12 @@ static struct track *open_external_file(struct MPContext *mpctx, char *filename,
     case STREAM_SUB: ss = -1; break;
     }
     vs = -1; // avi can't go without video
+    struct demuxer_params params = {
+        .ass_library = mpctx->ass_library, // demux_libass requires it
+    };
     struct demuxer *demuxer =
         demux_open_withparams(&mpctx->opts, stream, format, demuxer_name,
-                              as, vs, ss, filename, NULL);
+                              as, vs, ss, filename, &params);
     if (!demuxer) {
         free_stream(stream);
         goto err_out;
@@ -3963,7 +3923,7 @@ static struct track *open_external_file(struct MPContext *mpctx, char *filename,
         if (stream->type == filter) {
             struct track *t = add_stream_track(mpctx, stream, false);
             t->is_external = true;
-            t->title = talloc_strdup(t, filename);
+            t->title = talloc_strdup(t, disp_filename);
             t->external_filename = talloc_strdup(t, filename);
             first = t;
         }
@@ -3971,7 +3931,7 @@ static struct track *open_external_file(struct MPContext *mpctx, char *filename,
     if (!first) {
         free_demuxer(demuxer);
         mp_msg(MSGT_CPLAYER, MSGL_WARN, "No streams added from file %s.\n",
-               filename);
+               disp_filename);
         goto err_out;
     }
     MP_TARRAY_APPEND(NULL, mpctx->sources, mpctx->num_sources, demuxer);
@@ -3979,7 +3939,7 @@ static struct track *open_external_file(struct MPContext *mpctx, char *filename,
 
 err_out:
     mp_msg(MSGT_CPLAYER, MSGL_ERR, "Can not open external file %s.\n",
-           filename);
+           disp_filename);
     return false;
 }
 
@@ -3990,12 +3950,30 @@ static void open_audiofiles_from_options(struct MPContext *mpctx)
                        opts->audio_stream_cache, STREAM_AUDIO);
 }
 
-// Just for -subfile. open_subtitles_from_options handles -sub text sub files.
-static void open_subfiles_from_options(struct MPContext *mpctx)
+struct track *mp_add_subtitles(struct MPContext *mpctx, char *filename, int noerr)
 {
     struct MPOpts *opts = &mpctx->opts;
-    open_external_file(mpctx, opts->sub_stream, opts->sub_demuxer_name,
-                       0, STREAM_SUB);
+    return open_external_file(mpctx, filename, opts->sub_demuxer_name, 0,
+                              STREAM_SUB);
+}
+
+static void open_subtitles_from_resolve(struct MPContext *mpctx)
+{
+    struct MPOpts *opts = &mpctx->opts;
+    struct mp_resolve_result *res = mpctx->resolve_result;
+    if (!res)
+        return;
+    for (int n = 0; n < res->num_subs; n++) {
+        struct mp_resolve_sub *sub = res->subs[n];
+        char *s = talloc_strdup(NULL, sub->url);
+        if (!s)
+            s = talloc_asprintf(NULL, "memory://%s", sub->data);
+        struct track *t =
+            open_external_file(mpctx, s, opts->sub_demuxer_name, 0, STREAM_SUB);
+        talloc_free(s);
+        if (t)
+            t->lang = talloc_strdup(t, sub->lang);
+    }
 }
 
 static void print_timeline(struct MPContext *mpctx)
@@ -4049,7 +4027,7 @@ static void add_subtitle_fonts_from_sources(struct MPContext *mpctx)
 static struct mp_resolve_result *resolve_url(const char *filename,
                                              struct MPOpts *opts)
 {
-#ifdef CONFIG_LIBQUVI
+#if defined(CONFIG_LIBQUVI) || defined(CONFIG_LIBQUVI9)
     return mp_resolve_quvi(filename, opts);
 #else
     return NULL;
@@ -4182,8 +4160,17 @@ static void play_current_file(struct MPContext *mpctx)
 
     char *stream_filename = mpctx->filename;
     mpctx->resolve_result = resolve_url(stream_filename, opts);
-    if (mpctx->resolve_result)
+    if (mpctx->resolve_result) {
+        if (mpctx->resolve_result->playlist) {
+            // Replace entry with playlist contents
+            playlist_transfer_entries(mpctx->playlist,
+                                      mpctx->resolve_result->playlist);
+            if (mpctx->playlist->current)
+                playlist_remove(mpctx->playlist, mpctx->playlist->current);
+            goto terminate_playback;
+        }
         stream_filename = mpctx->resolve_result->url;
+    }
     int file_format = DEMUXER_TYPE_UNKNOWN;
     mpctx->stream = open_stream(stream_filename, opts, &file_format);
     if (!mpctx->stream) { // error...
@@ -4224,6 +4211,7 @@ static void play_current_file(struct MPContext *mpctx)
     // CACHE2: initial prefill: 20%  later: 5%  (should be set by -cacheopts)
     int res = stream_enable_cache_percent(&mpctx->stream,
                                           opts->stream_cache_size,
+                                          opts->stream_cache_def_size,
                                           opts->stream_cache_min_percent,
                                           opts->stream_cache_seek_min_percent);
     if (res == 0)
@@ -4284,13 +4272,21 @@ goto_reopen_demuxer: ;
     if (mpctx->timeline)
         timeline_set_part(mpctx, mpctx->timeline_part, true);
 
+    // Decide correct-pts mode based on first segment of video track
+    opts->correct_pts = opts->user_correct_pts;
+    if (opts->correct_pts < 0) {
+        opts->correct_pts =
+            demux_control(mpctx->demuxer, DEMUXER_CTRL_CORRECT_PTS,
+                          NULL) == DEMUXER_CTRL_OK;
+    }
+
     mpctx->initialized_flags |= INITIALIZED_DEMUXER;
 
     add_subtitle_fonts_from_sources(mpctx);
 
     open_subtitles_from_options(mpctx);
+    open_subtitles_from_resolve(mpctx);
     open_audiofiles_from_options(mpctx);
-    open_subfiles_from_options(mpctx);
 
     check_previous_track_selection(mpctx);
 
@@ -4337,13 +4333,6 @@ goto_reopen_demuxer: ;
                 "FPS forced to be %5.3f  (ftime: %5.3f).\n",
                 mpctx->sh_video->fps, mpctx->sh_video->frametime);
     }
-
-    mp_input_set_section(mpctx->input, NULL, 0);
-    //TODO: add desired (stream-based) sections here
-    if (mpctx->master_demuxer->type == DEMUXER_TYPE_TV)
-        mp_input_set_section(mpctx->input, "tv", 0);
-    if (mpctx->encode_lavc_ctx)
-        mp_input_set_section(mpctx->input, "encode", MP_INPUT_NO_DEFAULT_SECTION);
 
     //==================== START PLAYING =======================
 
@@ -4401,6 +4390,12 @@ goto_reopen_demuxer: ;
     double startpos = rel_time_to_abs(mpctx, opts->play_start, -1);
     if (startpos != -1 || mpctx->timeline) {
         queue_seek(mpctx, MPSEEK_ABSOLUTE, startpos, 0);
+        execute_queued_seek(mpctx);
+    }
+    if (startpos == -1 && mpctx->resolve_result &&
+        mpctx->resolve_result->start_time > 0)
+    {
+        queue_seek(mpctx, MPSEEK_ABSOLUTE, mpctx->resolve_result->start_time, 0);
         execute_queued_seek(mpctx);
     }
     if (opts->chapterrange[0] > 0) {
@@ -4518,6 +4513,16 @@ static void play_files(struct MPContext *mpctx)
         if (!mpctx->playlist->current && !mpctx->opts.player_idle_mode)
             break;
     }
+}
+
+// Abort current playback and set the given entry to play next.
+// e must be on the mpctx->playlist.
+void mp_set_playlist_entry(struct MPContext *mpctx, struct playlist_entry *e)
+{
+    assert(playlist_entry_to_index(mpctx->playlist, e) >= 0);
+    mpctx->playlist->current = e;
+    mpctx->playlist->current_was_replaced = false;
+    mpctx->stop_play = PT_CURRENT_ENTRY;
 }
 
 void mp_print_version(int always)
@@ -4691,17 +4696,20 @@ static int mpv_main(int argc, char *argv[])
     set_priority();
 #endif
 
+    init_input(mpctx);
+
 #ifdef CONFIG_ENCODING
-    if (opts->encode_output.file) {
+    if (opts->encode_output.file && *opts->encode_output.file) {
         mpctx->encode_lavc_ctx = encode_lavc_init(&opts->encode_output);
-	if(!mpctx->encode_lavc_ctx) {
+        if(!mpctx->encode_lavc_ctx) {
             mp_msg(MSGT_VO, MSGL_INFO, "Encoding initialization failed.");
             exit_player(mpctx, EXIT_ERROR, 1);
-	}
+        }
         m_config_set_option0(mpctx->mconfig, "vo", "lavc");
         m_config_set_option0(mpctx->mconfig, "ao", "lavc");
         m_config_set_option0(mpctx->mconfig, "fixed-vo", "yes");
         m_config_set_option0(mpctx->mconfig, "gapless-audio", "yes");
+        mp_input_enable_section(mpctx->input, "encode", MP_INPUT_EXCLUSIVE);
     }
 #endif
 
@@ -4710,8 +4718,6 @@ static int mpv_main(int argc, char *argv[])
 #endif
 
     mpctx->osd = osd_create(opts, mpctx->ass_library);
-
-    init_input(mpctx);
 
     mpctx->playlist->current = mpctx->playlist->first;
 

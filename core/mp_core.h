@@ -115,7 +115,6 @@ enum {
 typedef struct MPContext {
     struct MPOpts opts;
     struct m_config *mconfig;
-    struct mp_fifo *key_fifo;
     struct input_ctx *input;
     struct osd_state *osd;
     struct mp_osd_msg *osd_msg_stack;
@@ -226,6 +225,7 @@ typedef struct MPContext {
     double audio_delay;
 
     double last_heartbeat;
+    double last_metadata_update;
 
     double mouse_timer;
     unsigned int mouse_event_ts;
@@ -290,8 +290,7 @@ extern int forced_subs_only;
 void uninit_player(struct MPContext *mpctx, unsigned int mask);
 void reinit_audio_chain(struct MPContext *mpctx);
 double playing_audio_pts(struct MPContext *mpctx);
-struct track *mp_add_subtitles(struct MPContext *mpctx, char *filename,
-                               float fps, int noerr);
+struct track *mp_add_subtitles(struct MPContext *mpctx, char *filename, int noerr);
 int reinit_video_chain(struct MPContext *mpctx);
 int reinit_video_filters(struct MPContext *mpctx);
 void pause_player(struct MPContext *mpctx);
@@ -304,7 +303,7 @@ double get_time_length(struct MPContext *mpctx);
 double get_start_time(struct MPContext *mpctx);
 double get_current_time(struct MPContext *mpctx);
 int get_percent_pos(struct MPContext *mpctx);
-double get_current_pos_ratio(struct MPContext *mpctx);
+double get_current_pos_ratio(struct MPContext *mpctx, bool use_range);
 int get_current_chapter(struct MPContext *mpctx);
 char *chapter_display_name(struct MPContext *mpctx, int chapter);
 char *chapter_name(struct MPContext *mpctx, int chapter);
@@ -318,6 +317,7 @@ bool mp_remove_track(struct MPContext *mpctx, struct track *track);
 struct playlist_entry *mp_next_file(struct MPContext *mpctx, int direction);
 int mp_get_cache_percent(struct MPContext *mpctx);
 void mp_write_watch_later_conf(struct MPContext *mpctx);
+void mp_set_playlist_entry(struct MPContext *mpctx, struct playlist_entry *e);
 
 void mp_print_version(int always);
 

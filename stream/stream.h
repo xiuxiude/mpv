@@ -21,7 +21,6 @@
 
 #include "config.h"
 #include "core/mp_msg.h"
-#include "url.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,8 +37,8 @@
 #define STREAMTYPE_DUMMY -1    // for placeholders, when the actual reading is handled in the demuxer
 #define STREAMTYPE_FILE 0      // read from seekable file
 #define STREAMTYPE_VCD  1      // raw mode-2 CDROM reading, 2324 bytes/sector
-#define STREAMTYPE_STREAM 2    // same as FILE but no seeking (for net/stdin)
 #define STREAMTYPE_DVD  3      // libdvdread
+#define STREAMTYPE_MEMORY 4
 #define STREAMTYPE_PLAYLIST 6  // FIXME!!! same as STREAMTYPE_FILE now
 #define STREAMTYPE_CDDA 10     // raw audio CD reader
 #define STREAMTYPE_SMB 11      // smb:// url, using libsmbclient (samba)
@@ -101,6 +100,8 @@
 #define STREAM_CTRL_GET_START_TIME 20
 #define STREAM_CTRL_GET_CHAPTER_TIME 21
 #define STREAM_CTRL_GET_DVD_INFO 22
+#define STREAM_CTRL_SET_CONTENTS 23
+#define STREAM_CTRL_GET_METADATA 24
 
 struct stream_lang_req {
     int type;     // STREAM_AUDIO, STREAM_SUB
@@ -112,29 +113,6 @@ struct stream_dvd_info_req {
     unsigned int palette[16];
     int num_subs;
 };
-
-typedef enum {
-    streaming_stopped_e,
-    streaming_playing_e
-} streaming_status;
-
-// All this is for legacy http streams (and other things using tcp/udp)
-typedef struct streaming_control {
-    URL_t *url;
-    streaming_status status;
-    char *buffer;
-    unsigned int buffer_size;
-    unsigned int buffer_pos;
-    unsigned int bandwidth;     // The downstream available
-    int (*streaming_read)(int fd, char *buffer, int buffer_size,
-                          struct streaming_control *stream_ctrl);
-    int (*streaming_seek)(int fd, int64_t pos,
-                          struct streaming_control *stream_ctrl);
-    void *data;
-    // hacks for asf
-    int *audio_id_ptr;
-    int *video_id_ptr;
-} streaming_ctrl_t;
 
 struct stream;
 typedef struct stream_info_st {
@@ -176,13 +154,11 @@ typedef struct stream {
     int eof;
     int mode; //STREAM_READ or STREAM_WRITE
     bool streaming;     // known to be a network stream if true
-    int cache_size;     // cache size in KB to use if enabled
     void *priv; // used for DVD, TV, RTSP etc
     char *url; // strdup() of filename/url
     char *mime_type; // when HTTP streaming is used
     char *lavf_type; // name of expected demuxer type for lavf
     struct MPOpts *opts;
-    streaming_ctrl_t *streaming_ctrl;
 
     FILE *capture_file;
     char *capture_filename;
@@ -193,20 +169,14 @@ typedef struct stream {
     unsigned char buffer[];
 } stream_t;
 
-#ifdef CONFIG_NETWORKING
-#include "network.h"
-#endif
-
 int stream_fill_buffer(stream_t *s);
-void stream_unread_buffer(stream_t *s, void *buffer, size_t buffer_size);
 
 void stream_set_capture_file(stream_t *s, const char *filename);
 
 int stream_enable_cache_percent(stream_t **stream, int64_t stream_cache_size,
+                                int64_t stream_cache_def_size,
                                 float stream_cache_min_percent,
                                 float stream_cache_seek_min_percent);
-int stream_enable_cache(stream_t **stream, int64_t size, int64_t min,
-                        int64_t seek_limit);
 
 // Internal
 int stream_cache_init(stream_t *cache, stream_t *stream, int64_t size,
@@ -297,22 +267,19 @@ int stream_skip(stream_t *s, int64_t len);
 int stream_seek(stream_t *s, int64_t pos);
 int stream_read(stream_t *s, char *mem, int total);
 int stream_read_partial(stream_t *s, char *buf, int buf_size);
+struct bstr stream_peek(stream_t *s, int len);
 
 struct MPOpts;
-/*
- * Return allocated buffer for all data until EOF.
- * If amount of data would be more than max_size return NULL as data ptr.
- * Make the allocated buffer padding_bytes larger than the data read.
- * Write number of bytes read at *amount_read.
- */
+
 struct bstr stream_read_complete(struct stream *s, void *talloc_ctx,
-                                 int max_size, int padding_bytes);
+                                 int max_size);
 int stream_control(stream_t *s, int cmd, void *arg);
 void stream_update_size(stream_t *s);
 void free_stream(stream_t *s);
 stream_t *open_stream(const char *filename, struct MPOpts *options,
                       int *file_format);
 stream_t *open_output_stream(const char *filename, struct MPOpts *options);
+stream_t *open_memory_stream(void *data, int len);
 struct demux_stream;
 
 /// Set the callback to be used by libstream to check for user

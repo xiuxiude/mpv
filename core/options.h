@@ -92,6 +92,7 @@ typedef struct MPOpts {
     int load_config;
     int use_filedir_conf;
     int stream_cache_size;
+    int stream_cache_def_size;
     float stream_cache_min_percent;
     float stream_cache_seek_min_percent;
     int stream_cache_pause;
@@ -119,7 +120,6 @@ typedef struct MPOpts {
     int player_idle_mode;
     int slave_mode;
     int consolecontrols;
-    int doubleclick_time;
     int list_properties;
     struct m_rel_time play_start;
     struct m_rel_time play_end;
@@ -141,17 +141,16 @@ typedef struct MPOpts {
     int sub_pos;
     float sub_delay;
     float sub_fps;
+    float sub_speed;
     int forced_subs_only;
     char *quvi_format;
 
     // subreader.c
     int suboverlap_enabled;
     char *sub_cp;
-    int sub_no_text_pp;
 
     char *audio_stream;
     int audio_stream_cache;
-    char *sub_stream;
     char *demuxer_name;
     char *audio_demuxer_name;
     char *sub_demuxer_name;
@@ -202,7 +201,6 @@ typedef struct MPOpts {
     char *hwdec_codecs;
 
     struct lavc_param {
-        int debug;
         int fast;
         char *skip_loop_filter_str;
         char *skip_idct_str;
@@ -230,6 +228,7 @@ typedef struct MPOpts {
 
     struct input_conf {
         char *config_file;
+        int doubleclick_time;
         int key_fifo_size;
         int ar_delay;
         int ar_rate;
@@ -267,6 +266,13 @@ typedef struct MPOpts {
         int audio_first;
     } encode_output;
 } MPOpts;
+
+// Should be moved into MPOpts
+extern char **network_http_header_fields;
+extern char *network_useragent;
+extern char *network_referrer;
+extern int   network_cookies_enabled;
+extern char *cookies_file;
 
 extern const m_option_t mp_opts[];
 extern const struct MPOpts mp_default_opts;

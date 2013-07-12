@@ -24,6 +24,9 @@
 #include <assert.h>
 #include <time.h>
 
+#include <libavutil/avstring.h>
+#include <libavutil/common.h>
+
 #include "config.h"
 #include "talloc.h"
 #include "command.h"
@@ -31,7 +34,7 @@
 #include "stream/stream.h"
 #include "demux/demux.h"
 #include "demux/stheader.h"
-#include "mplayer.h"
+#include "resolve.h"
 #include "playlist.h"
 #include "playlist_parser.h"
 #include "sub/sub.h"
@@ -52,7 +55,6 @@
 #include "video/decode/dec_video.h"
 #include "audio/decode/dec_audio.h"
 #include "core/path.h"
-#include "sub/ass_mp.h"
 #include "stream/tv.h"
 #include "stream/stream_radio.h"
 #include "stream/pvr.h"
@@ -66,8 +68,6 @@
 #include "screenshot.h"
 
 #include "core/mp_core.h"
-#include "mp_fifo.h"
-#include "libavutil/avstring.h"
 
 static void change_video_filters(MPContext *mpctx, const char *cmd,
                                  const char *arg);
@@ -82,37 +82,17 @@ static char *format_delay(double time)
     return talloc_asprintf(NULL, "%d ms", ROUND(time * 1000));
 }
 
-static void rescale_input_coordinates(struct MPContext *mpctx, int ix, int iy,
-                                      double *dx, double *dy)
+// Get current mouse position in OSD coordinate space.
+void mp_get_osd_mouse_pos(struct MPContext *mpctx, float *x, float *y)
 {
-    struct MPOpts *opts = &mpctx->opts;
-    struct vo *vo = mpctx->video_out;
-    //remove the borders, if any, and rescale to the range [0,1],[0,1]
-    if (opts->vo.fs) {                //we are in full-screen mode
-        if (opts->vo.screenwidth > vo->dwidth)
-            // there are borders along the x axis
-            ix -= (opts->vo.screenwidth - vo->dwidth) / 2;
-        if (opts->vo.screenheight > vo->dheight)
-            // there are borders along the y axis (usual way)
-            iy -= (opts->vo.screenheight - vo->dheight) / 2;
-
-        if (ix < 0 || ix > vo->dwidth) {
-            *dx = *dy = -1.0;
-            return;
-        }                       //we are on one of the borders
-        if (iy < 0 || iy > vo->dheight) {
-            *dx = *dy = -1.0;
-            return;
-        }                       //we are on one of the borders
-    }
-
-    *dx = (double) ix / (double) vo->dwidth;
-    *dy = (double) iy / (double) vo->dheight;
-
-    mp_msg(MSGT_CPLAYER, MSGL_V,
-           "\r\nrescaled coordinates: %.3f, %.3f, screen (%d x %d), vodisplay: (%d, %d), fullscreen: %d\r\n",
-           *dx, *dy, opts->vo.screenwidth, opts->vo.screenheight, vo->dwidth,
-           vo->dheight, opts->vo.fs);
+    int wx, wy;
+    mp_input_get_mouse_pos(mpctx->input, &wx, &wy);
+    float p[2] = {wx, wy};
+    // Raw window coordinates (VO mouse events) to OSD resolution.
+    if (mpctx->video_out)
+        vo_control(mpctx->video_out, VOCTRL_WINDOW_TO_OSD_COORDS, p);
+    *x = p[0];
+    *y = p[1];
 }
 
 // Property-option bridge.
@@ -320,11 +300,14 @@ static int mp_property_percent_pos(m_option_t *prop, int action,
 
     switch (action) {
     case M_PROPERTY_SET: ;
-        int pos = *(int *)arg;
+        double pos = *(double *)arg;
         queue_seek(mpctx, MPSEEK_FACTOR, pos / 100.0, 0);
         return M_PROPERTY_OK;
     case M_PROPERTY_GET:
-        *(int *)arg = get_percent_pos(mpctx);
+        *(double *)arg = get_current_pos_ratio(mpctx, false) * 100.0;
+        return M_PROPERTY_OK;
+    case M_PROPERTY_PRINT:
+        *(char **)arg = talloc_asprintf(NULL, "%d", get_percent_pos(mpctx));
         return M_PROPERTY_OK;
     }
     return M_PROPERTY_NOT_IMPLEMENTED;
@@ -462,6 +445,65 @@ static int mp_property_edition(m_option_t *prop, int action, void *arg,
     }
     }
     return M_PROPERTY_NOT_IMPLEMENTED;
+}
+
+static struct mp_resolve_src *find_source(struct mp_resolve_result *res,
+                                          char *url)
+{
+    if (res->num_srcs == 0)
+        return NULL;
+
+    int src = 0;
+    for (int n = 0; n < res->num_srcs; n++) {
+        if (strcmp(res->srcs[n]->url, res->url) == 0) {
+            src = n;
+            break;
+        }
+    }
+    return res->srcs[src];
+}
+
+static int mp_property_quvi_format(m_option_t *prop, int action, void *arg,
+                                   MPContext *mpctx)
+{
+    struct mp_resolve_result *res = mpctx->resolve_result;
+    if (!res || !res->num_srcs)
+        return M_PROPERTY_UNAVAILABLE;
+
+    struct mp_resolve_src *cur = find_source(res, res->url);
+    if (!cur)
+        return M_PROPERTY_UNAVAILABLE;
+
+    switch (action) {
+    case M_PROPERTY_GET:
+        *(char **)arg = talloc_strdup(NULL, cur->encid);
+        return M_PROPERTY_OK;
+    case M_PROPERTY_SET: {
+        mpctx->stop_play = PT_RESTART;
+        break;
+    }
+    case M_PROPERTY_SWITCH: {
+        struct m_property_switch_arg *sarg = arg;
+        int pos = 0;
+        for (int n = 0; n < res->num_srcs; n++) {
+            if (res->srcs[n] == cur) {
+                pos = n;
+                break;
+            }
+        }
+        pos += sarg->inc;
+        if (pos < 0 || pos >= res->num_srcs) {
+            if (sarg->wrap) {
+                pos = (res->num_srcs + pos) % res->num_srcs;
+            } else {
+                pos = av_clip(pos, 0, res->num_srcs);
+            }
+        }
+        char *arg = res->srcs[pos]->encid;
+        return mp_property_quvi_format(prop, M_PROPERTY_SET, &arg, mpctx);
+    }
+    }
+    return mp_property_generic_option(prop, action, arg, mpctx);
 }
 
 /// Number of titles in file
@@ -1389,7 +1431,7 @@ static int mp_property_sub_delay(m_option_t *prop, int action, void *arg,
         *(char **)arg = format_delay(opts->sub_delay);
         return M_PROPERTY_OK;
     }
-    return mp_property_generic_option(prop, action, arg, mpctx);
+    return property_osd_helper(prop, action, arg, mpctx);
 }
 
 static int mp_property_sub_pos(m_option_t *prop, int action, void *arg,
@@ -1432,6 +1474,53 @@ static int mp_property_tv_color(m_option_t *prop, int action, void *arg,
 }
 
 #endif
+
+static int mp_property_playlist_pos(m_option_t *prop, int action, void *arg,
+                                    MPContext *mpctx)
+{
+    struct playlist *pl = mpctx->playlist;
+    if (!pl->first)
+        return M_PROPERTY_UNAVAILABLE;
+
+    switch (action) {
+    case M_PROPERTY_GET: {
+        int pos = playlist_entry_to_index(pl, pl->current);
+        if (pos < 0)
+            return M_PROPERTY_UNAVAILABLE;
+        *(int *)arg = pos;
+        return M_PROPERTY_OK;
+    }
+    case M_PROPERTY_SET: {
+        struct playlist_entry *e = playlist_entry_from_index(pl, *(int *)arg);
+        if (!e)
+            return M_PROPERTY_ERROR;
+        mp_set_playlist_entry(mpctx, e);
+        return M_PROPERTY_OK;
+    }
+    case M_PROPERTY_GET_TYPE: {
+        struct m_option opt = {
+            .name = prop->name,
+            .type = CONF_TYPE_INT,
+            .flags = CONF_RANGE,
+            .min = 0,
+            .max = playlist_entry_count(pl) - 1,
+        };
+        *(struct m_option *)arg = opt;
+        return M_PROPERTY_OK;
+    }
+    }
+    return M_PROPERTY_NOT_IMPLEMENTED;
+}
+
+static int mp_property_playlist_count(m_option_t *prop, int action, void *arg,
+                                      MPContext *mpctx)
+{
+    if (action == M_PROPERTY_GET) {
+        *(int *)arg = playlist_entry_count(mpctx->playlist);
+        return M_PROPERTY_OK;
+    }
+    return M_PROPERTY_NOT_IMPLEMENTED;
+}
 
 static int mp_property_playlist(m_option_t *prop, int action, void *arg,
                                 MPContext *mpctx)
@@ -1515,7 +1604,7 @@ static const m_option_t mp_properties[] = {
     { "length", mp_property_length, CONF_TYPE_TIME,
       M_OPT_MIN, 0, 0, NULL },
     { "avsync", mp_property_avsync, CONF_TYPE_DOUBLE },
-    { "percent-pos", mp_property_percent_pos, CONF_TYPE_INT,
+    { "percent-pos", mp_property_percent_pos, CONF_TYPE_DOUBLE,
       M_OPT_RANGE, 0, 100, NULL },
     { "time-pos", mp_property_time_pos, CONF_TYPE_TIME,
       M_OPT_MIN, 0, 0, NULL },
@@ -1523,6 +1612,7 @@ static const m_option_t mp_properties[] = {
     { "chapter", mp_property_chapter, CONF_TYPE_INT,
       M_OPT_MIN, 0, 0, NULL },
     M_OPTION_PROPERTY_CUSTOM("edition", mp_property_edition),
+    M_OPTION_PROPERTY_CUSTOM("quvi-format", mp_property_quvi_format),
     { "titles", mp_property_titles, CONF_TYPE_INT,
       0, 0, 0, NULL },
     { "chapters", mp_property_chapters, CONF_TYPE_INT,
@@ -1540,7 +1630,10 @@ static const m_option_t mp_properties[] = {
 
     { "chapter-list", mp_property_list_chapters, CONF_TYPE_STRING },
     { "track-list", property_list_tracks, CONF_TYPE_STRING },
+
     { "playlist", mp_property_playlist, CONF_TYPE_STRING },
+    { "playlist-pos", mp_property_playlist_pos, CONF_TYPE_INT },
+    { "playlist-count", mp_property_playlist_count, CONF_TYPE_INT },
 
     // Audio
     { "volume", mp_property_volume, CONF_TYPE_FLOAT,
@@ -1992,18 +2085,18 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
     }
 
     case MP_CMD_SUB_STEP:
-#ifdef CONFIG_ASS
         if (mpctx->osd->dec_sub) {
-            int movement = cmd->args[0].v.i;
-            struct ass_track *ass_track = sub_get_ass_track(mpctx->osd->dec_sub);
-            if (ass_track) {
+            double a[2];
+            a[0] = mpctx->video_pts - mpctx->osd->video_offset + opts->sub_delay;
+            a[1] = cmd->args[0].v.i;
+            if (sub_control(mpctx->osd->dec_sub, SD_CTRL_SUB_STEP, a) > 0) {
+                opts->sub_delay += a[0];
+
+                osd_changed_all(mpctx->osd);
                 set_osd_tmsg(mpctx, OSD_MSG_SUB_DELAY, osdl, osd_duration,
                              "Sub delay: %d ms", ROUND(opts->sub_delay * 1000));
-                double cur = (mpctx->video_pts + opts->sub_delay) * 1000 + .5;
-                opts->sub_delay += ass_step_sub(ass_track, cur, movement) / 1000.;
             }
         }
-#endif
         break;
 
     case MP_CMD_OSD: {
@@ -2046,11 +2139,8 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
 
         playlist_add(mpctx->playlist, playlist_entry_new(filename));
 
-        if (!append) {
-            mpctx->playlist->current = mpctx->playlist->first;
-            mpctx->playlist->current_was_replaced = false;
-            mpctx->stop_play = PT_CURRENT_ENTRY;
-        }
+        if (!append)
+            mp_set_playlist_entry(mpctx, mpctx->playlist->first);
         break;
     }
 
@@ -2064,10 +2154,8 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
             playlist_transfer_entries(mpctx->playlist, pl);
             talloc_free(pl);
 
-            if (!append) {
-                mpctx->playlist->current = mpctx->playlist->first;
-                mpctx->stop_play = PT_CURRENT_ENTRY;
-            }
+            if (!append && mpctx->playlist->first)
+                mp_set_playlist_entry(mpctx, mpctx->playlist->first);
         } else {
             mp_tmsg(MSGT_CPLAYER, MSGL_ERR,
                     "\nUnable to load playlist %s.\n", filename);
@@ -2087,6 +2175,29 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
                     break;
             }
             playlist_remove(mpctx->playlist, e);
+        }
+        break;
+    }
+
+    case MP_CMD_PLAYLIST_REMOVE: {
+        struct playlist_entry *e = playlist_entry_from_index(mpctx->playlist,
+                                                             cmd->args[0].v.i);
+        if (e) {
+            // Can't play a removed entry
+            if (mpctx->playlist->current == e)
+                mpctx->stop_play = PT_CURRENT_ENTRY;
+            playlist_remove(mpctx->playlist, e);
+        }
+        break;
+    }
+
+    case MP_CMD_PLAYLIST_MOVE: {
+        struct playlist_entry *e1 = playlist_entry_from_index(mpctx->playlist,
+                                                              cmd->args[0].v.i);
+        struct playlist_entry *e2 = playlist_entry_from_index(mpctx->playlist,
+                                                              cmd->args[1].v.i);
+        if (e1) {
+            playlist_move(mpctx->playlist, e1, e2);
         }
         break;
     }
@@ -2281,7 +2392,7 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
 
     case MP_CMD_SUB_ADD:
         if (sh_video) {
-            mp_add_subtitles(mpctx, cmd->args[0].v.s, sh_video->fps, 0);
+            mp_add_subtitles(mpctx, cmd->args[0].v.s, 0);
         }
         break;
 
@@ -2296,8 +2407,7 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
         struct track *sub = mp_track_by_tid(mpctx, STREAM_SUB, cmd->args[0].v.i);
         if (sh_video && sub && sub->is_external && sub->external_filename)
         {
-            struct track *nsub = mp_add_subtitles(mpctx, sub->external_filename,
-                                                  sh_video->fps, 0);
+            struct track *nsub = mp_add_subtitles(mpctx, sub->external_filename, 0);
             if (nsub) {
                 mp_remove_track(mpctx, sub);
                 mp_switch_track(mpctx, nsub->type, nsub);
@@ -2310,6 +2420,10 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
         screenshot_request(mpctx, cmd->args[0].v.i, cmd->args[1].v.i, msg_osd);
         break;
 
+    case MP_CMD_SCREENSHOT_TO_FILE:
+        screenshot_to_file(mpctx, cmd->args[0].v.s, cmd->args[1].v.i, msg_osd);
+        break;
+
     case MP_CMD_RUN:
 #ifndef __MINGW32__
         if (!fork()) {
@@ -2320,17 +2434,17 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
         break;
 
     case MP_CMD_KEYDOWN_EVENTS:
-        mplayer_put_key(mpctx->key_fifo, cmd->args[0].v.i);
+        mp_input_put_key(mpctx->input, cmd->args[0].v.i);
         break;
 
-    case MP_CMD_SET_MOUSE_POS: {
-        int pointer_x, pointer_y;
-        double dx, dy;
-        pointer_x = cmd->args[0].v.i;
-        pointer_y = cmd->args[1].v.i;
-        rescale_input_coordinates(mpctx, pointer_x, pointer_y, &dx, &dy);
+    case MP_CMD_ENABLE_INPUT_SECTION:
+        mp_input_enable_section(mpctx->input, cmd->args[0].v.s,
+                                cmd->args[1].v.i == 1 ? MP_INPUT_EXCLUSIVE : 0);
         break;
-    }
+
+    case MP_CMD_DISABLE_INPUT_SECTION:
+        mp_input_disable_section(mpctx->input, cmd->args[0].v.s);
+        break;
 
     case MP_CMD_VO_CMDLINE:
         if (mpctx->video_out) {
@@ -2396,6 +2510,12 @@ void run_command(MPContext *mpctx, mp_cmd_t *cmd)
     case MP_CMD_VF:
         change_video_filters(mpctx, cmd->args[0].v.s, cmd->args[1].v.s);
         break;
+
+    case MP_CMD_COMMAND_LIST: {
+        for (struct mp_cmd *sub = cmd->args[0].v.p; sub; sub = sub->queue_next)
+            run_command(mpctx, sub);
+        break;
+    }
 
     default:
         mp_msg(MSGT_CPLAYER, MSGL_V,

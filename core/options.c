@@ -40,6 +40,12 @@
 #include "mp_core.h"
 #include "osdep/priority.h"
 
+int   network_bandwidth=0;
+int   network_cookies_enabled = 0;
+char *network_useragent="MPlayer 1.1-4.7";
+char *network_referrer=NULL;
+char **network_http_header_fields=NULL;
+
 extern char *lirc_configfile;
 
 extern int mp_msg_color;
@@ -325,6 +331,9 @@ const m_option_t mp_opts[] = {
                       ({"no", 0},
                        {"auto", -1}),
                       OPTDEF_INT(-1)),
+    OPT_CHOICE_OR_INT("cache-default", stream_cache_def_size, 0, 32, 0x7fffffff,
+                      ({"no", 0}),
+                      OPTDEF_INT(320)),
     OPT_FLOATRANGE("cache-min", stream_cache_min_percent, 0, 0, 99),
     OPT_FLOATRANGE("cache-seek-min", stream_cache_seek_min_percent, 0, 0, 99),
     OPT_CHOICE_OR_INT("cache-pause", stream_cache_pause, 0,
@@ -343,22 +352,11 @@ const m_option_t mp_opts[] = {
     {"bluray-angle",   &bluray_angle,   CONF_TYPE_INT,    CONF_RANGE, 0, 999, NULL},
 #endif /* CONFIG_LIBBLURAY */
 
-#ifdef CONFIG_NETWORKING
-    {"user", &network_username, CONF_TYPE_STRING, 0, 0, 0, NULL},
-    {"passwd", &network_password, CONF_TYPE_STRING, 0, 0, 0, NULL},
-    {"bandwidth", &network_bandwidth, CONF_TYPE_INT, CONF_MIN, 0, 0, NULL},
     {"http-header-fields", &network_http_header_fields, CONF_TYPE_STRING_LIST, 0, 0, 0, NULL},
     {"user-agent", &network_useragent, CONF_TYPE_STRING, 0, 0, 0, NULL},
     {"referrer", &network_referrer, CONF_TYPE_STRING, 0, 0, 0, NULL},
     {"cookies", &network_cookies_enabled, CONF_TYPE_FLAG, 0, 0, 1, NULL},
     {"cookies-file", &cookies_file, CONF_TYPE_STRING, 0, 0, 0, NULL},
-    {"prefer-ipv4", &network_prefer_ipv4, CONF_TYPE_FLAG, 0, 0, 1, NULL},
-    {"ipv4-only-proxy", &network_ipv4_only_proxy, CONF_TYPE_FLAG, 0, 0, 1, NULL},
-    {"reuse-socket", &reuse_socket, CONF_TYPE_FLAG, 0, 0, 1, NULL},
-#ifdef HAVE_AF_INET6
-    {"prefer-ipv6", &network_prefer_ipv4, CONF_TYPE_FLAG, 0, 1, 0, NULL},
-#endif /* HAVE_AF_INET6 */
-#endif /* CONFIG_NETWORKING */
 
 // ------------------------- demuxer options --------------------
 
@@ -396,9 +394,6 @@ const m_option_t mp_opts[] = {
 
     OPT_STRING("quvi-format", quvi_format, 0),
 
-    { "rawaudio", (void *)&demux_rawaudio_opts, CONF_TYPE_SUBCONFIG, 0, 0, 0, NULL},
-    { "rawvideo", (void *)&demux_rawvideo_opts, CONF_TYPE_SUBCONFIG, 0, 0, 0, NULL},
-
 #ifdef CONFIG_CDDA
     { "cdda", (void *)&cdda_opts, CONF_TYPE_SUBCONFIG, 0, 0, 0, NULL},
 #endif
@@ -406,12 +401,10 @@ const m_option_t mp_opts[] = {
     // demuxer.c - select audio/sub file/demuxer
     OPT_STRING("audiofile", audio_stream, 0),
     OPT_INTRANGE("audiofile-cache", audio_stream_cache, 0, 50, 65536),
-    OPT_STRING("subfile", sub_stream, 0),
     OPT_STRING("demuxer", demuxer_name, 0),
     OPT_STRING("audio-demuxer", audio_demuxer_name, 0),
     OPT_STRING("sub-demuxer", sub_demuxer_name, 0),
     OPT_FLAG("extbased", extension_parsing, 0),
-    OPT_FLAG("mkv-subtitle-preroll", mkv_subtitle_preroll, 0),
 
     {"mf", (void *) mfopts_conf, CONF_TYPE_SUBCONFIG, 0,0,0, NULL},
 #ifdef CONFIG_RADIO
@@ -456,7 +449,9 @@ const m_option_t mp_opts[] = {
 
     OPT_STRING("ad", audio_decoders, 0),
     OPT_STRING("vd", video_decoders, 0),
-    OPT_FLAG("dtshd", dtshd, 0),
+
+    OPT_FLAG("ad-spdif-dtshd", dtshd, 0),
+    OPT_FLAG("dtshd", dtshd, 0), // old alias
 
     OPT_CHOICE("hwdec", hwdec_api, 0,
                ({"no", 0},
@@ -482,10 +477,16 @@ const m_option_t mp_opts[] = {
     OPT_CHOICE("field-dominance", field_dominance, 0,
                ({"auto", -1}, {"top", 0}, {"bottom", 1})),
 
-    {"lavdopts", (void *) lavc_decode_opts_conf, CONF_TYPE_SUBCONFIG, 0, 0, 0, NULL},
-    {"lavfdopts", (void *) lavfdopts_conf, CONF_TYPE_SUBCONFIG, 0, 0, 0, NULL},
-
+    {"vd-lavc", (void *) lavc_decode_opts_conf, CONF_TYPE_SUBCONFIG},
     {"ad-lavc", (void *) ad_lavc_decode_opts_conf, CONF_TYPE_SUBCONFIG},
+
+    {"demuxer-lavf", (void *) lavfdopts_conf, CONF_TYPE_SUBCONFIG},
+    {"demuxer-rawaudio", (void *)&demux_rawaudio_opts, CONF_TYPE_SUBCONFIG},
+    {"demuxer-rawvideo", (void *)&demux_rawvideo_opts, CONF_TYPE_SUBCONFIG},
+
+    OPT_FLAG("demuxer-mkv-subtitle-preroll", mkv_subtitle_preroll, 0),
+    OPT_FLAG("mkv-subtitle-preroll", mkv_subtitle_preroll, 0), // old alias
+
 // ------------------------- subtitles options --------------------
 
     OPT_STRINGLIST("sub", sub_name, 0),
@@ -493,12 +494,11 @@ const m_option_t mp_opts[] = {
     OPT_STRING("subcp", sub_cp, 0),
     OPT_FLOAT("sub-delay", sub_delay, 0),
     OPT_FLOAT("subfps", sub_fps, 0),
+    OPT_FLOAT("sub-speed", sub_speed, 0),
     OPT_FLAG("autosub", sub_auto, 0),
     OPT_FLAG("sub-visibility", sub_visibility, 0),
     OPT_FLAG("sub-forced-only", forced_subs_only, 0),
-    // enable Closed Captioning display
-    OPT_FLAG_CONSTANTS("overlapsub", suboverlap_enabled, 0, 0, 2),
-    OPT_FLAG_STORE("sub-no-text-pp", sub_no_text_pp, 0, 1),
+    OPT_FLAG_CONSTANTS("sub-fix-timing", suboverlap_enabled, 0, 1, 0),
     OPT_CHOICE("autosub-match", sub_match_fuzziness, 0,
                ({"exact", 0}, {"fuzzy", 1}, {"all", 2})),
     OPT_INTRANGE("sub-pos", sub_pos, 0, 0, 100),
@@ -684,7 +684,6 @@ const m_option_t mp_opts[] = {
     OPT_INTRANGE("key-fifo-size", input.key_fifo_size, CONF_GLOBAL, 2, 65000),
     OPT_FLAG("consolecontrols", consolecontrols, CONF_GLOBAL),
     OPT_FLAG("mouse-movements", vo.enable_mouse_movements, CONF_GLOBAL),
-    OPT_INTRANGE("doubleclick-time", doubleclick_time, 0, 0, 1000),
 #ifdef CONFIG_TV
     {"tvscan", (void *) tvscan_conf, CONF_TYPE_SUBCONFIG, 0, 0, 0, NULL},
 #endif /* CONFIG_TV */
@@ -780,7 +779,6 @@ const struct MPOpts mp_default_opts = {
     .initial_audio_sync = 1,
     .term_osd = 2,
     .consolecontrols = 1,
-    .doubleclick_time = 300,
     .play_frames = -1,
     .keep_open = 0,
     .audio_id = -1,
@@ -789,6 +787,7 @@ const struct MPOpts mp_default_opts = {
     .audio_display = 1,
     .sub_visibility = 1,
     .sub_pos = 100,
+    .sub_speed = 1.0,
     .extension_parsing = 1,
     .audio_output_channels = MP_CHMAP_INIT_STEREO,
     .audio_output_format = -1,  // AF_FORMAT_UNKNOWN
@@ -804,7 +803,7 @@ const struct MPOpts mp_default_opts = {
     .ass_vsfilter_aspect_compat = 1,
     .ass_style_override = 1,
     .use_embedded_fonts = 1,
-    .suboverlap_enabled = 1,
+    .suboverlap_enabled = 0,
 
     .hwdec_codecs = "all",
 
@@ -817,6 +816,7 @@ const struct MPOpts mp_default_opts = {
     },
     .input = {
         .key_fifo_size = 7,
+        .doubleclick_time = 300,
         .ar_delay = 200,
         .ar_rate = 40,
         .use_joystick = 1,

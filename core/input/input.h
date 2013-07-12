@@ -36,9 +36,12 @@ enum mp_command_type {
     MP_CMD_TV_STEP_NORM,
     MP_CMD_TV_STEP_CHANNEL_LIST,
     MP_CMD_SCREENSHOT,
+    MP_CMD_SCREENSHOT_TO_FILE,
     MP_CMD_LOADFILE,
     MP_CMD_LOADLIST,
     MP_CMD_PLAYLIST_CLEAR,
+    MP_CMD_PLAYLIST_REMOVE,
+    MP_CMD_PLAYLIST_MOVE,
     MP_CMD_SUB_STEP,
     MP_CMD_TV_SET_CHANNEL,
     MP_CMD_TV_LAST_CHANNEL,
@@ -60,13 +63,15 @@ enum mp_command_type {
     MP_CMD_RADIO_STEP_CHANNEL,
     MP_CMD_RADIO_SET_CHANNEL,
     MP_CMD_RADIO_SET_FREQ,
-    MP_CMD_SET_MOUSE_POS,
     MP_CMD_ADD,
     MP_CMD_CYCLE,
     MP_CMD_RADIO_STEP_FREQ,
     MP_CMD_TV_STEP_FREQ,
     MP_CMD_TV_START_SCAN,
     MP_CMD_STOP,
+
+    MP_CMD_ENABLE_INPUT_SECTION,
+    MP_CMD_DISABLE_INPUT_SECTION,
 
     /// DVB commands
     MP_CMD_DVB_SET_CHANNEL = 5101,
@@ -83,6 +88,9 @@ enum mp_command_type {
 
     /// Video output commands
     MP_CMD_VO_CMDLINE,
+
+    // Internal
+    MP_CMD_COMMAND_LIST, // list of sub-commands in args[0].v.p
 };
 
 #define MP_CMD_MAX_ARGS 10
@@ -108,10 +116,10 @@ enum mp_on_osd {
 };
 
 enum mp_input_section_flags {
-    // If a key binding is not defined in the current section, search the
-    // default section for it ("default" refers to bindings with no section
-    // specified, not to the default input.conf aka builtin key bindings)
-    MP_INPUT_NO_DEFAULT_SECTION = 1,
+    // If a key binding is not defined in the current section, do not search the
+    // other sections for it (like the default section). Instead, an unbound
+    // key warning will be printed.
+    MP_INPUT_EXCLUSIVE = 1,
 };
 
 struct input_ctx;
@@ -124,6 +132,7 @@ struct mp_cmd_arg {
         float f;
         double d;
         char *s;
+        void *p;
     } v;
 };
 
@@ -136,6 +145,10 @@ typedef struct mp_cmd {
     bool raw_args;
     enum mp_on_osd on_osd;
     bstr original;
+    char *input_section;
+    bool key_up_follows;
+    bool mouse_move;
+    int mouse_x, mouse_y;
     struct mp_cmd *queue_next;
 } mp_cmd_t;
 
@@ -167,8 +180,18 @@ int mp_input_add_key_fd(struct input_ctx *ictx, int fd, int select,
                         int read_func(void *ctx, int fd),
                         int close_func(int fd), void *ctx);
 
-// Feed a keypress (alternative to being returned from read_func above)
-void mp_input_feed_key(struct input_ctx *ictx, int code);
+// Process keyboard input. code is a key code from keycodes.h, possibly
+// with modifiers applied. MP_INPUT_RELEASE_ALL is also a valid value.
+void mp_input_put_key(struct input_ctx *ictx, int code);
+
+// Like mp_input_put_key(), but process all UTF-8 characters in the given
+// string as key events.
+void mp_input_put_key_utf8(struct input_ctx *ictx, int mods, struct bstr t);
+
+// Update mouse position (in window coordinates).
+void mp_input_set_mouse_pos(struct input_ctx *ictx, int x, int y);
+
+void mp_input_get_mouse_pos(struct input_ctx *ictx, int *x, int *y);
 
 // As for the cmd one you usually don't need this function.
 void mp_input_rm_key_fd(struct input_ctx *ictx, int fd);
@@ -197,15 +220,48 @@ void mp_cmd_free(struct mp_cmd *cmd);
 // This creates a copy of a command (used by the auto repeat stuff).
 struct mp_cmd *mp_cmd_clone(struct mp_cmd *cmd);
 
-// Set current input section
+// Set current input section. The section is appended on top of the list of
+// active sections, so its bindings are considered first. If the section was
+// already active, it's moved to the top as well.
+// name==NULL will behave as if name=="default"
 // flags is a bitfield of enum mp_input_section_flags values
-void mp_input_set_section(struct input_ctx *ictx, char *name, int flags);
+void mp_input_enable_section(struct input_ctx *ictx, char *name, int flags);
 
-// Get current input section
-char *mp_input_get_section(struct input_ctx *ictx);
+// Undo mp_input_enable_section().
+// name==NULL will behave as if name=="default"
+void mp_input_disable_section(struct input_ctx *ictx, char *name);
+
+// Like mp_input_set_section(ictx, ..., 0) for all sections.
+void mp_input_disable_all_sections(struct input_ctx *ictx);
+
+// Set the contents of an input section.
+//  name: name of the section, for mp_input_set_section() etc.
+//  location: location string (like filename) for error reporting
+//  contents: list of keybindings, like input.conf
+//            a value of NULL deletes the section
+//  builtin: create as builtin section; this means if the user defines bindings
+//           using "{name}", they won't be ignored or overwritten - instead,
+//           they are preferred to the bindings defined with this call
+// If the section already exists, its bindings are removed and replaced.
+void mp_input_define_section(struct input_ctx *ictx, char *name, char *location,
+                             char *contents, bool builtin);
+
+// Define where on the screen the named input section should receive.
+// Setting a rectangle of size 0 unsets the mouse area.
+// A rectangle with negative size disables mouse input for this section.
+void mp_input_set_section_mouse_area(struct input_ctx *ictx, char *name,
+                                     int x0, int y0, int x1, int y1);
 
 // Used to detect mouse movement.
 unsigned int mp_input_get_mouse_event_counter(struct input_ctx *ictx);
+
+// Test whether there is any input section which wants to receive events.
+// Note that the mouse event is always delivered, even if this returns false.
+bool mp_input_test_mouse_active(struct input_ctx *ictx, int x, int y);
+
+// Whether input.c wants mouse drag events at this mouse position. If this
+// returns false, some VOs will initiate window dragging.
+bool mp_input_test_dragging(struct input_ctx *ictx, int x, int y);
 
 // Initialize the input system
 struct input_conf;

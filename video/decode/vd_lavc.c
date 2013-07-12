@@ -73,7 +73,6 @@ static void uninit(struct sh_video *sh);
 #define OPT_BASE_STRUCT struct MPOpts
 
 const m_option_t lavc_decode_opts_conf[] = {
-    OPT_INTRANGE("debug", lavc_param.debug, 0, 0, 9999999),
     OPT_FLAG_CONSTANTS("fast", lavc_param.fast, 0, 0, CODEC_FLAG2_FAST),
     OPT_STRING("skiploopfilter", lavc_param.skip_loop_filter_str, 0),
     OPT_STRING("skipidct", lavc_param.skip_idct_str, 0),
@@ -325,9 +324,6 @@ static void init_avctx(sh_video_t *sh, const char *decoder, struct hwdec *hwdec)
     avctx->flags |= lavc_param->bitexact;
 
     avctx->flags2 |= lavc_param->fast;
-    avctx->debug = lavc_param->debug;
-    if (lavc_param->debug)
-        av_log_set_level(AV_LOG_DEBUG);
     avctx->skip_loop_filter = str2AVDiscard(lavc_param->skip_loop_filter_str);
     avctx->skip_idct = str2AVDiscard(lavc_param->skip_idct_str);
     avctx->skip_frame = str2AVDiscard(lavc_param->skip_frame_str);
@@ -440,10 +436,21 @@ static int init_vo(sh_video_t *sh, AVFrame *frame)
         ctx->pix_fmt = pix_fmt;
         ctx->best_csp = pixfmt2imgfmt(pix_fmt);
 
-        sh->colorspace = avcol_spc_to_mp_csp(ctx->avctx->colorspace);
-        sh->color_range = avcol_range_to_mp_csp_levels(ctx->avctx->color_range);
+        ctx->image_params = (struct mp_image_params) {
+            .imgfmt = ctx->best_csp,
+            .w = width,
+            .h = height,
+            // Ideally, we should also set aspect ratio, but we aren't there yet
+            // - so vd.c calculates display size from sh->aspect.
+            .d_w = width,
+            .d_h = height,
+            .colorspace = avcol_spc_to_mp_csp(ctx->avctx->colorspace),
+            .colorlevels = avcol_range_to_mp_csp_levels(ctx->avctx->color_range),
+            .chroma_location =
+                avchroma_location_to_mp(ctx->avctx->chroma_sample_location),
+        };
 
-        if (!mpcodecs_config_vo(sh, sh->disp_w, sh->disp_h, ctx->best_csp))
+        if (mpcodecs_reconfig_vo(sh, &ctx->image_params) < 0)
             return -1;
 
         ctx->vo_initialized = 1;
@@ -694,8 +701,9 @@ static int decode(struct sh_video *sh, struct demux_packet *packet,
     struct mp_image *mpi = image_from_decoder(sh);
     assert(mpi->planes[0]);
 
-    mpi->colorspace = sh->colorspace;
-    mpi->levels = sh->color_range;
+    mpi->colorspace = ctx->image_params.colorspace;
+    mpi->levels = ctx->image_params.colorlevels;
+    mpi->chroma_location = ctx->image_params.chroma_location;
 
     *out_image = mpi;
     return 1;
@@ -749,7 +757,8 @@ static int control(sh_video_t *sh, int cmd, void *arg)
         *(int *)arg = delay;
         return CONTROL_TRUE;
     case VDCTRL_REINIT_VO:
-        mpcodecs_config_vo(sh, sh->disp_w, sh->disp_h, ctx->best_csp);
+        if (ctx->vo_initialized)
+            mpcodecs_reconfig_vo(sh, &ctx->image_params);
         return true;
     }
     return CONTROL_UNKNOWN;

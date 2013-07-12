@@ -31,18 +31,16 @@
 
 #include "talloc.h"
 #include "core/options.h"
-#include "core/mplayer.h"
 #include "core/mp_msg.h"
 #include "sub.h"
 #include "dec_sub.h"
 #include "img_convert.h"
 #include "draw_bmp.h"
-#include "subreader.h"
 #include "video/mp_image.h"
 #include "video/mp_image_pool.h"
 
 static const struct osd_style_opts osd_style_opts_def = {
-    .font = "Sans",
+    .font = "sans-serif",
     .font_size = 45,
     .color = {255, 255, 255, 255},
     .border_color = {0, 0, 0, 255},
@@ -162,7 +160,7 @@ static void render_object(struct osd_state *osd, struct osd_object *obj,
         if (osd->render_bitmap_subs && osd->dec_sub) {
             double sub_pts = video_pts;
             if (sub_pts != MP_NOPTS_VALUE)
-                sub_pts -= osd->sub_offset;
+                sub_pts -= osd->video_offset - opts->sub_delay;
             sub_get_bitmaps(osd->dec_sub, obj->vo_res, sub_pts, out_imgs);
         }
     } else {

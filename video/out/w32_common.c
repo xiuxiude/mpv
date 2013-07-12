@@ -29,7 +29,7 @@
 #include "vo.h"
 #include "aspect.h"
 #include "w32_common.h"
-#include "core/mp_fifo.h"
+#include "core/input/input.h"
 #include "osdep/io.h"
 #include "talloc.h"
 
@@ -123,6 +123,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
     if (!vo)
         return DefWindowProcW(hWnd, message, wParam, lParam);
     struct vo_w32_state *w32 = vo->w32;
+    int mouse_button = 0;
 
     switch (message) {
         case WM_ERASEBKGND: // no need to erase background seperately
@@ -170,7 +171,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
             }
             break;
         case WM_CLOSE:
-            mplayer_put_key(vo->key_fifo, MP_KEY_CLOSE_WIN);
+            mp_input_put_key(vo->input_ctx, MP_KEY_CLOSE_WIN);
             break;
         case WM_SYSCOMMAND:
             switch (wParam) {
@@ -187,7 +188,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
         case WM_SYSKEYDOWN: {
             int mpkey = lookup_keymap_table(vk_map, wParam);
             if (mpkey)
-                mplayer_put_key(vo->key_fifo, mpkey | mod_state(vo));
+                mp_input_put_key(vo->input_ctx, mpkey | mod_state(vo));
             if (wParam == VK_F10)
                 return 0;
             break;
@@ -210,54 +211,62 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam,
                 && !key_state(vo, VK_RETURN))
                 code = code - 1 + (mods & MP_KEY_MODIFIER_SHIFT ? 'A' : 'a');
             if (code >= 32 && code < (1<<21)) {
-                mplayer_put_key(vo->key_fifo, code | mods);
+                mp_input_put_key(vo->input_ctx, code | mods);
                 // At least with Alt+char, not calling DefWindowProcW stops
                 // Windows from emitting a beep.
                 return 0;
             }
             break;
         }
-        case WM_LBUTTONDOWN:
-            if (!vo->opts->nomouse_input && (vo->opts->fs || (wParam & MK_CONTROL)))
-            {
-                mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN0 | mod_state(vo));
-                break;
-            }
-            if (!vo->opts->fs) {
-                ReleaseCapture();
-                SendMessage(hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-                return 0;
-            }
-            break;
-        case WM_MBUTTONDOWN:
-            if (!vo->opts->nomouse_input)
-                mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN1 | mod_state(vo));
-            break;
-        case WM_RBUTTONDOWN:
-            if (!vo->opts->nomouse_input)
-                mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN2 | mod_state(vo));
-            break;
         case WM_MOUSEMOVE:
             vo_mouse_movement(vo, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             break;
-        case WM_MOUSEWHEEL:
-            if (!vo->opts->nomouse_input) {
-                int x = GET_WHEEL_DELTA_WPARAM(wParam);
-                if (x > 0)
-                    mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN3 | mod_state(vo));
-                else
-                    mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN4 | mod_state(vo));
-            }
+        case WM_LBUTTONDOWN:
+            mouse_button = MP_MOUSE_BTN0 | MP_KEY_STATE_DOWN;
             break;
+        case WM_LBUTTONUP:
+            mouse_button = MP_MOUSE_BTN0 | MP_KEY_STATE_UP;
+            break;
+        case WM_MBUTTONDOWN:
+            mouse_button = MP_MOUSE_BTN1 | MP_KEY_STATE_DOWN;
+            break;
+        case WM_MBUTTONUP:
+            mouse_button = MP_MOUSE_BTN1 | MP_KEY_STATE_UP;
+            break;
+        case WM_RBUTTONDOWN:
+            mouse_button = MP_MOUSE_BTN2 | MP_KEY_STATE_DOWN;
+            break;
+        case WM_RBUTTONUP:
+            mouse_button = MP_MOUSE_BTN2 | MP_KEY_STATE_UP;
+            break;
+        case WM_MOUSEWHEEL: {
+            int x = GET_WHEEL_DELTA_WPARAM(wParam);
+            mouse_button = x > 0 ? MP_MOUSE_BTN3 : MP_MOUSE_BTN4;
+            break;
+        }
         case WM_XBUTTONDOWN:
-            if (!vo->opts->nomouse_input) {
-                int x = HIWORD(wParam);
-                if (x == 1)
-                    mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN5 | mod_state(vo));
-                else // if (x == 2)
-                    mplayer_put_key(vo->key_fifo, MP_MOUSE_BTN6 | mod_state(vo));
-            }
+            mouse_button = HIWORD(wParam) == 1 ? MP_MOUSE_BTN5 : MP_MOUSE_BTN6;
+            mouse_button |= MP_KEY_STATE_DOWN;
             break;
+        case WM_XBUTTONUP:
+            mouse_button = HIWORD(wParam) == 1 ? MP_MOUSE_BTN5 : MP_MOUSE_BTN6;
+            mouse_button |= MP_KEY_STATE_UP;
+            break;
+    }
+
+    if (mouse_button && !vo->opts->nomouse_input) {
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+        mouse_button |= mod_state(vo);
+        if (mouse_button == (MP_MOUSE_BTN0 | MP_KEY_STATE_DOWN) &&
+            !vo->opts->fs && !mp_input_test_dragging(vo->input_ctx, x, y))
+        {
+            // Window dragging hack
+            ReleaseCapture();
+            SendMessage(hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+            return 0;
+        }
+        mp_input_put_key(vo->input_ctx, mouse_button);
     }
 
     return DefWindowProcW(hWnd, message, wParam, lParam);
@@ -304,7 +313,7 @@ int vo_w32_check_events(struct vo *vo)
             MoveWindow(w32->window, 0, 0, r.right, r.bottom, FALSE);
         if (!IsWindow(WIN_ID_TO_HWND(vo->opts->WinID)))
             // Window has probably been closed, e.g. due to program crash
-            mplayer_put_key(vo->key_fifo, MP_KEY_CLOSE_WIN);
+            mp_input_put_key(vo->input_ctx, MP_KEY_CLOSE_WIN);
     }
 
     return w32->event_flags;
@@ -697,9 +706,11 @@ int vo_w32_control(struct vo *vo, int *events, int request, void *arg)
         return VO_TRUE;
     case VOCTRL_KILL_SCREENSAVER:
         w32->disable_screensaver = true;
+        SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED);
         return VO_TRUE;
     case VOCTRL_RESTORE_SCREENSAVER:
         w32->disable_screensaver = false;
+        SetThreadExecutionState(ES_CONTINUOUS);
         return VO_TRUE;
     case VOCTRL_UPDATE_WINDOW_TITLE: {
         wchar_t *title = mp_from_utf8(NULL, (char *)arg);
@@ -725,6 +736,7 @@ void vo_w32_uninit(struct vo *vo)
     if (!w32)
         return;
     while (ShowCursor(1) < 0) { }
+    SetThreadExecutionState(ES_CONTINUOUS);
     DestroyWindow(w32->window);
     UnregisterClassW(classname, 0);
     talloc_free(w32);

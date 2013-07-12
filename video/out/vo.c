@@ -37,7 +37,6 @@
 #include "vo.h"
 #include "aspect.h"
 #include "core/input/input.h"
-#include "core/mp_fifo.h"
 #include "core/m_config.h"
 #include "core/mp_msg.h"
 #include "video/mp_image.h"
@@ -285,7 +284,6 @@ static void replace_legacy_vo_name(bstr *name)
 }
 
 struct vo *init_best_video_out(struct mp_vo_opts *opts,
-                               struct mp_fifo *key_fifo,
                                struct input_ctx *input_ctx,
                                struct encode_lavc_context *encode_lavc_ctx)
 {
@@ -294,7 +292,6 @@ struct vo *init_best_video_out(struct mp_vo_opts *opts,
     struct vo *vo = talloc_ptrtype(NULL, vo);
     struct vo initial_values = {
         .opts = opts,
-        .key_fifo = key_fifo,
         .encode_lavc_ctx = encode_lavc_ctx,
         .input_ctx = input_ctx,
         .event_fd = -1,
@@ -406,21 +403,34 @@ static int event_fd_callback(void *ctx, int fd)
     return MP_INPUT_NOTHING;
 }
 
-int vo_config(struct vo *vo, uint32_t width, uint32_t height,
-                     uint32_t d_width, uint32_t d_height, uint32_t flags,
-                     uint32_t format)
+int vo_reconfig(struct vo *vo, struct mp_image_params *params, int flags)
 {
-    aspect_save_videores(vo, width, height, d_width, d_height);
+    int d_width = params->d_w;
+    int d_height = params->d_h;
+    aspect_save_videores(vo, params->w, params->h, d_width, d_height);
 
     if (vo_control(vo, VOCTRL_UPDATE_SCREENINFO, NULL) == VO_TRUE) {
-        determine_window_geometry(vo, d_width, d_height);
+        determine_window_geometry(vo, params->d_w, params->d_h);
         d_width = vo->dwidth;
         d_height = vo->dheight;
     }
+    vo->dwidth = d_width;
+    vo->dheight = d_height;
 
-    int ret = vo->driver->config(vo, width, height, d_width, d_height, flags,
-                                 format);
-    vo->config_ok = (ret == 0);
+    struct mp_image_params p2 = *params;
+    p2.d_w = vo->aspdat.prew;
+    p2.d_h = vo->aspdat.preh;
+
+    int ret;
+    if (vo->driver->reconfig) {
+        ret = vo->driver->reconfig(vo, &p2, flags);
+    } else {
+        // Old config() takes window size, while reconfig() takes aspect (!)
+        ret = vo->driver->config(vo, p2.w, p2.h, d_width, d_height, flags,
+                                 p2.imgfmt);
+        ret = ret ? -1 : 0;
+    }
+    vo->config_ok = (ret >= 0);
     vo->config_count += vo->config_ok;
     if (vo->registered_fd == -1 && vo->event_fd != -1 && vo->config_ok) {
         mp_input_add_key_fd(vo->input_ctx, vo->event_fd, 1, event_fd_callback,
@@ -573,10 +583,7 @@ const char *vo_get_window_title(struct vo *vo)
  */
 void vo_mouse_movement(struct vo *vo, int posx, int posy)
 {
-  char cmd_str[40];
-  if (!vo->opts->enable_mouse_movements)
-    return;
-  snprintf(cmd_str, sizeof(cmd_str), "set_mouse_pos %i %i", posx, posy);
-  mp_input_queue_cmd(vo->input_ctx, mp_input_parse_cmd(bstr0(cmd_str), ""));
+    if (!vo->opts->enable_mouse_movements)
+        return;
+    mp_input_set_mouse_pos(vo->input_ctx, posx, posy);
 }
-

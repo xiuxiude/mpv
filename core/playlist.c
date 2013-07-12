@@ -114,6 +114,20 @@ void playlist_clear(struct playlist *pl)
     pl->current_was_replaced = false;
 }
 
+// Moves entry such that entry->prev = at (even if at is NULL)
+void playlist_move(struct playlist *pl, struct playlist_entry *entry,
+                   struct playlist_entry *at)
+{
+    struct playlist_entry *save_current = pl->current;
+    bool save_replaced = pl->current_was_replaced;
+
+    playlist_unlink(pl, entry);
+    playlist_insert(pl, at ? at->prev : pl->last, entry);
+
+    pl->current = save_current;
+    pl->current_was_replaced = save_replaced;
+}
+
 void playlist_add_file(struct playlist *pl, const char *filename)
 {
     playlist_add(pl, playlist_entry_new(filename));
@@ -180,13 +194,53 @@ void playlist_add_base_path(struct playlist *pl, bstr base_path)
     }
 }
 
-// Move all entries from source_pl to pl, appending them at the end of pl.
-// source_pl will be empty, and all entries have changed ownership to pl.
+// Move all entries from source_pl to pl, appending them after the current entry
+// of pl. source_pl will be empty, and all entries have changed ownership to pl.
 void playlist_transfer_entries(struct playlist *pl, struct playlist *source_pl)
 {
+    struct playlist_entry *add_after = pl->current;
+    if (pl->current && pl->current_was_replaced)
+        add_after = pl->current->next;
+    if (!add_after)
+        add_after = pl->last;
+
     while (source_pl->first) {
         struct playlist_entry *e = source_pl->first;
         playlist_unlink(source_pl, e);
-        playlist_add(pl, e);
+        playlist_insert(pl, add_after, e);
+        add_after = e;
     }
 }
+
+// Return number of entries between list start and e.
+// Return -1 if e is not on the list, or if e is NULL.
+int playlist_entry_to_index(struct playlist *pl, struct playlist_entry *e)
+{
+    struct playlist_entry *cur = pl->first;
+    int pos = 0;
+    if (!e)
+        return -1;
+    while (cur && cur != e) {
+        cur = cur->next;
+        pos++;
+    }
+    return cur == e ? pos : -1;
+}
+
+int playlist_entry_count(struct playlist *pl)
+{
+    return playlist_entry_to_index(pl, pl->last) + 1;
+}
+
+// Return entry for which playlist_entry_to_index() would return index.
+// Return NULL if not found.
+struct playlist_entry *playlist_entry_from_index(struct playlist *pl, int index)
+{
+    struct playlist_entry *e = pl->first;
+    for (int n = 0; ; n++) {
+        if (!e || n == index)
+            return e;
+        e = e->next;
+    }
+}
+

@@ -149,9 +149,7 @@ typedef struct sh_video {
     int colorspace;       // mp_csp
     int color_range;      // mp_csp_levels
     // output driver/filters: (set by libmpcodecs core)
-    unsigned int outfmt;
     struct vf_instance *vfilter;  // video filter chain
-    int output_flags;       // query_format() results for output filters+vo
     const struct vd_functions *vd_driver;
     int vf_initialized;   // -1 failed, 0 not done, 1 done
     // win32-compatible codec parameters:
@@ -163,8 +161,9 @@ typedef struct sh_sub {
     SH_COMMON
     unsigned char *extradata;   // extra header data passed from demuxer
     int extradata_len;
+    int frame_based;            // timestamps are frame-based
+    bool is_utf8;               // if false, subtitle packet charset is unknown
     struct ass_track *track;    // loaded by libass
-    struct sub_data *sub_data;  // loaded by subreader.c
     struct dec_sub *dec_sub;    // decoder context
 } sh_sub_t;
 

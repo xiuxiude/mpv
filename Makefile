@@ -28,16 +28,15 @@ SOURCES_AUDIO_INPUT-$(OSS)      += stream/ai_oss.c
 SOURCES-$(AUDIO_INPUT)          += $(SOURCES_AUDIO_INPUT-yes)
 SOURCES-$(CDDA)                 += stream/stream_cdda.c \
                                    stream/cdinfo.c
-SOURCES-$(CDDB)                 += stream/stream_cddb.c
 SOURCES-$(DVBIN)                += stream/dvb_tune.c \
                                    stream/stream_dvb.c
 SOURCES-$(DVDREAD)              += stream/stream_dvd.c \
                                    stream/stream_dvd_common.c
 
-SOURCES-$(FTP)                  += stream/stream_ftp.c
-SOURCES-$(HAVE_SYS_MMAN_H)      += audio/filter/af_export.c osdep/mmap_anon.c
+SOURCES-$(HAVE_SYS_MMAN_H)      += audio/filter/af_export.c
 SOURCES-$(LADSPA)               += audio/filter/af_ladspa.c
-SOURCES-$(LIBASS)               += sub/ass_mp.c sub/sd_ass.c
+SOURCES-$(LIBASS)               += sub/ass_mp.c sub/sd_ass.c \
+                                   demux/demux_libass.c
 
 SOURCES-$(LIBBLURAY)            += stream/stream_bluray.c
 SOURCES-$(LIBBS2B)              += audio/filter/af_bs2b.c
@@ -55,15 +54,6 @@ SOURCES-$(MPG123)               += audio/decode/ad_mpg123.c
 
 SOURCES-$(NEED_GETTIMEOFDAY)    += osdep/gettimeofday.c
 SOURCES-$(NEED_GLOB)            += osdep/glob-win.c
-SOURCES-$(NEED_SHMEM)           += osdep/shmem.c
-SOURCES-$(NETWORKING)           += stream/asf_mmst_streaming.c \
-                                   stream/asf_streaming.c \
-                                   stream/cookies.c \
-                                   stream/http.c \
-                                   stream/network.c \
-                                   stream/udp.c \
-                                   stream/tcp.c \
-                                   stream/stream_udp.c \
 
 SOURCES-$(PRIORITY)             += osdep/priority.c
 SOURCES-$(PVR)                  += stream/stream_pvr.c
@@ -76,7 +66,6 @@ SOURCES-$(TV)                   += stream/stream_tv.c stream/tv.c \
 
 SOURCES-$(TV_V4L2)              += stream/tvi_v4l2.c stream/audio_in.c
 SOURCES-$(VCD)                  += stream/stream_vcd.c
-SOURCES-$(VSTREAM)              += stream/stream_vstream.c
 SOURCES-$(DUMMY_OSD)            += sub/osd_dummy.c
 SOURCES-$(LIBASS_OSD)           += sub/osd_libass.c
 
@@ -107,7 +96,8 @@ SOURCES-$(GL_WAYLAND)           += video/out/wayland_common.c \
 
 SOURCES-$(JACK)                 += audio/out/ao_jack.c
 SOURCES-$(JOYSTICK)             += core/input/joystick.c
-SOURCES-$(LIBQUVI)              += core/quvi.c
+SOURCES-$(LIBQUVI)              += core/resolve_quvi.c
+SOURCES-$(LIBQUVI9)             += core/resolve_quvi9.c
 SOURCES-$(LIRC)                 += core/input/lirc.c
 SOURCES-$(OPENAL)               += audio/out/ao_openal.c
 SOURCES-$(OSS)                  += audio/out/ao_oss.c
@@ -124,6 +114,11 @@ SOURCES-$(AF_LAVFI)             += audio/filter/af_lavfi.c
 
 ifeq ($(HAVE_AVUTIL_REFCOUNTING),no)
     SOURCES-yes                 += video/decode/lavc_dr1.c
+endif
+
+SOURCES-$(DL)                   += video/filter/vf_dlopen.c
+ifeq ($(DL),no)
+    SOURCES-$(WIN32)            += video/filter/vf_dlopen.c
 endif
 
 SOURCES = talloc.c \
@@ -170,6 +165,7 @@ SOURCES = talloc.c \
           core/av_log.c \
           core/av_opts.c \
           core/bstr.c \
+          core/charset_conv.c \
           core/codecs.c \
           core/command.c \
           core/cpudetect.c \
@@ -178,7 +174,6 @@ SOURCES = talloc.c \
           core/m_property.c \
           core/m_struct.c \
           core/mp_common.c \
-          core/mp_fifo.c \
           core/mp_msg.c \
           core/mp_ring.c \
           core/mplayer.c \
@@ -208,7 +203,7 @@ SOURCES = talloc.c \
           demux/demux_mf.c \
           demux/demux_mkv.c \
           demux/demux_mpg.c \
-          demux/demux_sub.c \
+          demux/demux_subreader.c \
           demux/demux_ts.c \
           demux/mp3_hdr.c \
           demux/parse_es.c \
@@ -222,26 +217,27 @@ SOURCES = talloc.c \
           osdep/io.c \
           osdep/numcores.c \
           osdep/timer.c \
+          stream/cookies.c \
           stream/stream.c \
           stream/stream_avdevice.c \
           stream/stream_file.c \
           stream/stream_lavf.c \
+          stream/stream_memory.c \
           stream/stream_mf.c \
           stream/stream_null.c \
-          stream/url.c \
           sub/dec_sub.c \
           sub/draw_bmp.c \
           sub/find_subfiles.c \
           sub/img_convert.c \
           sub/sd_lavc.c \
           sub/sd_lavc_conv.c \
+          sub/sd_lavf_srt.c \
           sub/sd_microdvd.c \
           sub/sd_movtext.c \
           sub/sd_spu.c \
           sub/sd_srt.c \
           sub/spudec.c \
           sub/sub.c \
-          sub/subreader.c \
           video/csputils.c \
           video/fmt-conversion.c \
           video/image_writer.c \
@@ -257,7 +253,6 @@ SOURCES = talloc.c \
           video/filter/vf_crop.c \
           video/filter/vf_delogo.c \
           video/filter/vf_divtc.c \
-          video/filter/vf_dlopen.c \
           video/filter/vf_down3dright.c \
           video/filter/vf_dsize.c \
           video/filter/vf_eq.c \
