@@ -1,0 +1,2 @@
+#!/bin/sh
+sed 's/^#define HAVE_/#define CONFIG_/' config.h > tmpconf ; mv tmpconf config.h
