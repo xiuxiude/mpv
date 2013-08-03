@@ -18,6 +18,8 @@
 AC_PREREQ([2.53])
 
 AC_INIT([mpv], [1], [mpv-team@googlegroups.com], [http://mpv.io])
+configure_flags="$*"
+
 AC_CONFIG_SRCDIR([core/mplayer.c])
 AC_CONFIG_HEADERS([config.h])
 
@@ -43,7 +45,8 @@ AC_DEFINE_UNQUOTED([MPLAYER_CONFDIR],   ["$sysconfdir/mpv"],
                    ["System level directory to store mpv configuration files"])
 AC_DEFINE_UNQUOTED([MPLAYER_LOCALEDIR], ["$datadir/man"],
                    ["System level directory to store mpv locale files"])
-AC_DEFINE([CONFIGURATION], [], [Configuration switches])
+AC_DEFINE_UNQUOTED([CONFIGURATION], "$configure_flags",
+                   ["Flags passed to ./configure"])
 
 PKG_ADD(LIBAV,
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
