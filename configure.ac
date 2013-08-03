@@ -45,15 +45,15 @@ AC_DEFINE_UNQUOTED([MPLAYER_LOCALEDIR], ["$datadir/man"],
                    ["System level directory to store mpv locale files"])
 AC_DEFINE([CONFIGURATION], [], [Configuration switches])
 
-PKG_HAVE_DEFINE_WITH_MODULES(LIBAV,
+PKG_ADD(LIBAV,
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
 
 AS_IF([test "$with_libav" = "no"], [
   AC_MSG_ERROR(["Unable to find development files for libav. Aborting."])
 ])
 
-PKG_HAVE_DEFINE_WITH_MODULES(LIBAVRESAMPLE, [libavresample >= 1.0.0])
-PKG_HAVE_DEFINE_WITH_MODULES(LIBSWRESAMPLE, [libswresample >= 0.17.102])
+PKG_ADD(LIBAVRESAMPLE, [libavresample >= 1.0.0])
+PKG_ADD(LIBSWRESAMPLE, [libswresample >= 0.17.102])
 
 AS_IF([test "$with_libavresample" = "no" &&
        test "$with_libswresample" = "no"], [
@@ -62,3 +62,10 @@ AS_IF([test "$with_libavresample" = "no" &&
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
+
+# XXX: This is for debug only remove me!
+AC_MSG_NOTICE([config files successfully generated! Here is some debug info:
+
+CFLAGS....... : $CFLAGS
+LIBS......... : $LIBS
+])
