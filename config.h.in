@@ -1,6 +1,6 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Configuration switches */
+/* "Flags passed to ./configure" */
 #undef CONFIGURATION
 
 /* Enable libav support */
