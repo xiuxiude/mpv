@@ -32,10 +32,10 @@
 #include "talloc.h"
 #include "config.h"
 
-#if defined(CONFIG_LIBAVRESAMPLE)
+#if defined(HAVE_LIBAVRESAMPLE)
 #include <libavresample/avresample.h>
 #define USE_SET_CHANNEL_MAPPING HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING
-#elif defined(CONFIG_LIBSWRESAMPLE)
+#elif defined(HAVE_LIBSWRESAMPLE)
 #include <libswresample/swresample.h>
 #define AVAudioResampleContext SwrContext
 #define avresample_alloc_context swr_alloc
@@ -84,7 +84,7 @@ struct af_resample {
     uint8_t *reorder_buffer;
 };
 
-#ifdef CONFIG_LIBAVRESAMPLE
+#ifdef HAVE_LIBAVRESAMPLE
 static int get_delay(struct af_resample *s)
 {
     return avresample_get_delay(s->avrctx);
