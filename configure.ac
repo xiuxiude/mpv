@@ -48,6 +48,8 @@ AC_DEFINE_UNQUOTED([MPLAYER_LOCALEDIR], ["$datadir/man"],
 AC_DEFINE_UNQUOTED([CONFIGURATION], "$configure_flags",
                    ["Flags passed to ./configure"])
 
+MP_DEFINE_OS_VARIABLES
+
 PKG_ADD(LIBAV,
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
 

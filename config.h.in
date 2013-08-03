@@ -12,6 +12,18 @@
 /* Enable libswresample support */
 #undef HAVE_LIBSWRESAMPLE
 
+/* HAVE_OS_FREEBSD */
+#undef HAVE_OS_FREEBSD
+
+/* HAVE_OS_LINUX */
+#undef HAVE_OS_LINUX
+
+/* HAVE_OS_OSX */
+#undef HAVE_OS_OSX
+
+/* HAVE_OS_WINDOWS */
+#undef HAVE_OS_WINDOWS
+
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
