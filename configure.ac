@@ -15,7 +15,7 @@
 # with mpv; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-AC_PREREQ([2.53])
+AC_PREREQ([2.62])
 
 AC_INIT([mpv], [1], [mpv-team@googlegroups.com], [http://mpv.io])
 configure_flags="$*"
@@ -48,7 +48,7 @@ AC_DEFINE_UNQUOTED([MPLAYER_LOCALEDIR], ["$datadir/man"],
 AC_DEFINE_UNQUOTED([CONFIGURATION], "$configure_flags",
                    ["Flags passed to ./configure"])
 
-MP_DEFINE_OS_VARIABLES
+AX_TIMERS
 
 PKG_ADD(LIBAV,
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])

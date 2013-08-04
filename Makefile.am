@@ -81,6 +81,7 @@ mpv_SOURCES = talloc.c \
               osdep/io.c \
               osdep/numcores.c \
               osdep/timer.c \
+              osdep/@osdep_timer@.c \
               stream/cookies.c \
               stream/stream.c \
               stream/stream_avdevice.c \
@@ -147,19 +148,6 @@ mpv_SOURCES = talloc.c \
               video/out/vo.c \
               video/out/vo_null.c \
               video/out/vo_image.c
-
-if HAVE_OS_OSX
-  mpv_SOURCES += osdep/timer-darwin.c \
-                 osdep/getch2.c
-else
-  if HAVE_OS_WINDOWS
-    mpv_SOURCES += osdep/timer-win32.c \
-                   osdep/getch2-win.c
-  else
-    mpv_SOURCES += osdep/timer-linux.c \
-                   osdep/getch2.c
-  endif
-endif
 
 core/input/input.c: core/input/input_conf.h
 core/input/input_conf.h: TOOLS/file2string.pl etc/input.conf

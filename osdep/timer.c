@@ -16,8 +16,8 @@
  */
 
 #include <stdlib.h>
-
 #include "timer.h"
+#include "config.h"
 
 static uint64_t raw_time_offset;
 
