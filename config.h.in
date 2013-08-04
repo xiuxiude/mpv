@@ -6,29 +6,23 @@
 /* Process priority */
 #undef CONFIG_PRIORITY
 
-/* Define 1 if has libavcodec enum_to_chroma_pos API */
-#undef HAVE_AVCODEC_CHROMA_POS_API
-
-/* Define 1 if has libavcodec new VDPAU API */
-#undef HAVE_AVCODEC_NEW_VDPAU_API
-
-/* Define 1 if has libavcodec AV_CODEC_PROP_TEXT_SUB API */
-#undef HAVE_AVCODEC_PROP_TEXT_SUB
-
-/* Define 1 if has libavresample set_channel_mapping API */
-#undef HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING
-
-/* Define 1 if has libavutil QP API */
-#undef HAVE_AVUTIL_QP_API
-
-/* Define 1 if has libavutil ref-counting API */
-#undef HAVE_AVUTIL_REFCOUNTING
-
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
 
 /* Enable libav support */
 #undef HAVE_LIBAV
+
+/* Define 1 if has libavcodec enum_to_chroma_pos API */
+#undef HAVE_LIBAVCODEC_CHROMA_POS_API
+
+/* Define 1 if has libavcodec new VDPAU API */
+#undef HAVE_LIBAVCODEC_NEW_VDPAU_API
+
+/* Define 1 if has libavcodec AV_CODEC_PROP_TEXT_SUB API */
+#undef HAVE_LIBAVCODEC_PROP_TEXT_SUB
+
+/* Enable libavdevice support */
+#undef HAVE_LIBAVDEVICE
 
 /* Enable libavfilter support */
 #undef HAVE_LIBAVFILTER
@@ -39,6 +33,21 @@
 /* Enable libavresample support */
 #undef HAVE_LIBAVRESAMPLE
 
+/* Define 1 if has libavresample set_channel_mapping API */
+#undef HAVE_LIBAVRESAMPLE_SET_CHANNEL_MAPPING
+
+/* Define 1 if has libavutil av_opt_set_int_list API */
+#undef HAVE_LIBAVUTIL_OPT_SET_INT_LIST
+
+/* Define 1 if has libavutil QP API */
+#undef HAVE_LIBAVUTIL_QP_API
+
+/* Define 1 if has libavutil ref-counting API */
+#undef HAVE_LIBAVUTIL_REFCOUNTING
+
+/* Enable libpostproc support */
+#undef HAVE_LIBPOSTPROC
+
 /* Enable libswresample support */
 #undef HAVE_LIBSWRESAMPLE
 
@@ -47,6 +56,12 @@
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
+
+/* Define 1 if libavfilter is usable through af_lavfi */
+#undef LIBAVFILTER_USABLE_WITH_AF_LAVFI
+
+/* Define 1 if libavfilter is usable through vf_lavfi */
+#undef LIBAVFILTER_USABLE_WITH_VF_LAVFI
 
 /* "System level directory to store mpv configuration files" */
 #undef MPLAYER_CONFDIR

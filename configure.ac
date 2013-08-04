@@ -48,15 +48,15 @@ AC_DEFINE_UNQUOTED([CONFIGURATION], "$configure_flags",
 
 AX_OSDEP
 
-AX_PKG_ADD(LIBAV,
+AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
 
 AS_IF([test "$with_libav" = "no"], [
   AC_MSG_ERROR(["Unable to find development files for libav. Aborting."])
 ])
 
-AX_PKG_ADD(LIBAVRESAMPLE, [libavresample >= 1.0.0])
-AX_PKG_ADD(LIBSWRESAMPLE, [libswresample >= 0.17.102])
+AX_PKG_ADD([LIBAVRESAMPLE], [libavresample >= 1.0.0])
+AX_PKG_ADD([LIBSWRESAMPLE], [libswresample >= 0.17.102])
 
 AS_IF([test "$with_libavresample" = "no" &&
        test "$with_libswresample" = "no"], [
@@ -65,38 +65,43 @@ AS_IF([test "$with_libavresample" = "no" &&
 
 AS_IF([test "$with_libavresample" = "yes"], [
   AX_CHECK_STATEMENT(
-    [AVRESAMPLE_SET_CHANNEL_MAPPING], [libavresample set_channel_mapping API],
+    [LIBAVRESAMPLE_SET_CHANNEL_MAPPING], [libavresample set_channel_mapping API],
     [libavresample/avresample.h],
     [avresample_set_channel_mapping(NULL, NULL)])
 ])
 
 AX_CHECK_STATEMENT(
-  [AVCODEC_NEW_VDPAU_API], [libavcodec new VDPAU API],
+  [LIBAVCODEC_NEW_VDPAU_API], [libavcodec new VDPAU API],
   [libavutil/pixfmt.h],
   [int x = AV_PIX_FMT_VDPAU])
 
 AX_CHECK_STATEMENT(
-  [AVCODEC_PROP_TEXT_SUB], [libavcodec AV_CODEC_PROP_TEXT_SUB API],
+  [LIBAVCODEC_PROP_TEXT_SUB], [libavcodec AV_CODEC_PROP_TEXT_SUB API],
   [libavcodec/avcodec.h],
   [int x = AV_CODEC_PROP_TEXT_SUB])
 
 AX_CHECK_STATEMENT(
-  [AVCODEC_CHROMA_POS_API], [libavcodec enum_to_chroma_pos API],
+  [LIBAVCODEC_CHROMA_POS_API], [libavcodec enum_to_chroma_pos API],
   [libavcodec/avcodec.h],
   [int x, y; avcodec_enum_to_chroma_pos(&x, &y, AVCHROMA_LOC_UNSPECIFIED)])
 
 AX_CHECK_STATEMENT(
-  [AVUTIL_QP_API], [libavutil QP API],
+  [LIBAVUTIL_QP_API], [libavutil QP API],
   [libavutil/frame.h],
   [av_frame_get_qp_table(NULL, NULL, NULL)])
 
 AX_CHECK_STATEMENT(
-  [AVUTIL_REFCOUNTING], [libavutil ref-counting API],
+  [LIBAVUTIL_REFCOUNTING], [libavutil ref-counting API],
   [libavutil/frame.h],
   [av_frame_unref(NULL)])
 
+AX_CHECK_STATEMENT(
+  [LIBAVUTIL_OPT_SET_INT_LIST], [libavutil av_opt_set_int_list API],
+  [libavutil/opt.h],
+  [av_opt_set_int_list(0,0,(int*)0,0,0)])
+
 AX_STASH_BUILD_FLAGS
-AX_PKG_ADD(LIBAVFILTER, [libavfilter])
+AX_PKG_ADD([LIBAVFILTER], [libavfilter])
 
 AX_CC_CHECK(
   [LIBAVFILTER_NOT_OLD_OR_BROKEN], [libavfilter not old or broken],
@@ -114,6 +119,35 @@ AX_CC_CHECK(
 AS_IF([test "$have_libavfilter_not_old_or_broken" = "no"], [
   AX_POP_BUILD_FLAGS
 ])
+
+AC_MSG_CHECKING([if libavfilter is usable through vf_lavfi])
+AS_IF([test "$have_libavfilter_not_old_or_broken" = "yes"], [
+  AS_IF([test "$have_libavutil_refcounting" = "yes"], [
+    AC_DEFINE([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [],
+              [Define 1 if libavfilter is usable through vf_lavfi])
+    AC_MSG_RESULT([yes])
+  ],[
+    AC_MSG_RESULT([no (libavutil too old)])
+  ])
+],[
+  AC_MSG_RESULT([no])
+])
+
+AC_MSG_CHECKING([if libavfilter is usable through af_lavfi])
+AS_IF([test "$have_libavfilter_not_old_or_broken" = "yes"], [
+  AS_IF([test "$have_libavutil_opt_set_int_list" = "yes"], [
+    AC_DEFINE([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [],
+              [Define 1 if libavfilter is usable through af_lavfi])
+    AC_MSG_RESULT([yes])
+  ],[
+    AC_MSG_RESULT([no (libavutil too old)])
+  ])
+],[
+  AC_MSG_RESULT([no])
+])
+
+AX_PKG_ADD([LIBAVDEVICE], [libavdevice >= 54.0.0])
+AX_PKG_ADD([LIBPOSTPROC], [libpostproc >= 52.0.0])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
