@@ -95,5 +95,25 @@ AX_CHECK_STATEMENT(
   [libavutil/frame.h],
   [av_frame_unref(NULL)])
 
+AX_STASH_BUILD_FLAGS
+AX_PKG_ADD(LIBAVFILTER, [libavfilter])
+
+AX_CC_CHECK(
+  [LIBAVFILTER_NOT_OLD_OR_BROKEN], [libavfilter not old or broken],
+  [libavfilter/avfilter.h],
+  [
+    #include <libavfilter/avfilter.h>
+    void vf_next_query_format() {}
+    int main(void) {
+        avfilter_register_all();
+        vf_next_query_format();
+        return 0;
+    }
+  ])
+
+AS_IF([test "$have_libavfilter_not_old_or_broken" = "no"], [
+  AX_POP_BUILD_FLAGS
+])
+
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])

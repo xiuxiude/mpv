@@ -30,6 +30,12 @@
 /* Enable libav support */
 #undef HAVE_LIBAV
 
+/* Enable libavfilter support */
+#undef HAVE_LIBAVFILTER
+
+/* Define 1 if has libavfilter not old or broken */
+#undef HAVE_LIBAVFILTER_NOT_OLD_OR_BROKEN
+
 /* Enable libavresample support */
 #undef HAVE_LIBAVRESAMPLE
 
