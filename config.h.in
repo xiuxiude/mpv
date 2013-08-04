@@ -3,6 +3,12 @@
 /* "Flags passed to ./configure" */
 #undef CONFIGURATION
 
+/* Process priority */
+#undef CONFIG_PRIORITY
+
+/* Use DOS paths */
+#undef HAVE_DOS_PATHS
+
 /* Enable libav support */
 #undef HAVE_LIBAV
 

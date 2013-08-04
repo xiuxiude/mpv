@@ -78,6 +78,7 @@ mpv_SOURCES = talloc.c \
               demux/demux_raw.c \
               demux/ebml.c \
               demux/mf.c \
+              osdep/@osdep_getch@.c \
               osdep/io.c \
               osdep/numcores.c \
               osdep/timer.c \
