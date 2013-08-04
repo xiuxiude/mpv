@@ -67,41 +67,35 @@ AS_IF([test "$with_libavresample" = "no" &&
 
 AS_IF([test "$with_libavresample" = "yes"], [
   AX_CHECK_STATEMENT(
+    [AVRESAMPLE_SET_CHANNEL_MAPPING], [libavresample set_channel_mapping API],
     [libavresample/avresample.h],
-    [avresample_set_channel_mapping(NULL, NULL)],
-    [HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING],
-    [libavresample avresample_set_channel_mapping() API])
+    [avresample_set_channel_mapping(NULL, NULL)])
 ])
 
 AX_CHECK_STATEMENT(
+  [AVCODEC_NEW_VDPAU_API], [libavcodec new VDPAU API],
   [libavutil/pixfmt.h],
-  [int x = AV_PIX_FMT_VDPAU],
-  [HAVE_AV_CODEC_NEW_VDPAU_API],
-  [libavcodec new vdpau API])
+  [int x = AV_PIX_FMT_VDPAU])
 
 AX_CHECK_STATEMENT(
+  [AVCODEC_PROP_TEXT_SUB], [libavcodec AV_CODEC_PROP_TEXT_SUB API],
   [libavcodec/avcodec.h],
-  [int x = AV_CODEC_PROP_TEXT_SUB],
-  [HAVE_AV_CODEC_PROP_TEXT_SUB],
-  [libavcodec AV_CODEC_PROP_TEXT_SUB API])
+  [int x = AV_CODEC_PROP_TEXT_SUB])
 
 AX_CHECK_STATEMENT(
+  [AVCODEC_CHROMA_POS_API], [libavcodec enum_to_chroma_pos API],
   [libavcodec/avcodec.h],
-  [int x, y; avcodec_enum_to_chroma_pos(&x, &y, AVCHROMA_LOC_UNSPECIFIED)],
-  [HAVE_AVCODEC_CHROMA_POS_API],
-  [libavcodec avcodec_enum_to_chroma_pos() API])
+  [int x, y; avcodec_enum_to_chroma_pos(&x, &y, AVCHROMA_LOC_UNSPECIFIED)])
 
 AX_CHECK_STATEMENT(
+  [AVUTIL_QP_API], [libavutil QP API],
   [libavutil/frame.h],
-  [av_frame_get_qp_table(NULL, NULL, NULL)],
-  [HAVE_AVUTIL_QP_API],
-  [libavutil QP API])
+  [av_frame_get_qp_table(NULL, NULL, NULL)])
 
 AX_CHECK_STATEMENT(
+  [AVUTIL_REFCOUNTING], [libavutil ref-counting API],
   [libavutil/frame.h],
-  [av_frame_unref(NULL)],
-  [HAVE_AVUTIL_REFCOUNTING],
-  [libavutil ref-counting API])
+  [av_frame_unref(NULL)])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
