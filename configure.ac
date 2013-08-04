@@ -50,15 +50,15 @@ AC_DEFINE_UNQUOTED([CONFIGURATION], "$configure_flags",
 
 AX_OSDEP
 
-PKG_ADD(LIBAV,
+AX_PKG_ADD(LIBAV,
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
 
 AS_IF([test "$with_libav" = "no"], [
   AC_MSG_ERROR(["Unable to find development files for libav. Aborting."])
 ])
 
-PKG_ADD(LIBAVRESAMPLE, [libavresample >= 1.0.0])
-PKG_ADD(LIBSWRESAMPLE, [libswresample >= 0.17.102])
+AX_PKG_ADD(LIBAVRESAMPLE, [libavresample >= 1.0.0])
+AX_PKG_ADD(LIBSWRESAMPLE, [libswresample >= 0.17.102])
 
 AS_IF([test "$with_libavresample" = "no" &&
        test "$with_libswresample" = "no"], [
