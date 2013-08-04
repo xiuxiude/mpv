@@ -18,7 +18,7 @@
 AC_PREREQ([2.69])
 
 AC_INIT([mpv], m4_esyscmd_s([git describe]), [mpv-team@googlegroups.com],
-        [http://mpv.io])
+        [mpv], [http://mpv.io])
 configure_flags="$*"
 
 AC_CONFIG_SRCDIR([core/mplayer.c])
