@@ -73,5 +73,35 @@ AS_IF([test "$with_libavresample" = "yes"], [
     [libavresample avresample_set_channel_mapping() API])
 ])
 
+AX_CHECK_STATEMENT(
+  [libavutil/pixfmt.h],
+  [int x = AV_PIX_FMT_VDPAU],
+  [HAVE_AV_CODEC_NEW_VDPAU_API],
+  [libavcodec new vdpau API])
+
+AX_CHECK_STATEMENT(
+  [libavcodec/avcodec.h],
+  [int x = AV_CODEC_PROP_TEXT_SUB],
+  [HAVE_AV_CODEC_PROP_TEXT_SUB],
+  [libavcodec AV_CODEC_PROP_TEXT_SUB API])
+
+AX_CHECK_STATEMENT(
+  [libavcodec/avcodec.h],
+  [int x, y; avcodec_enum_to_chroma_pos(&x, &y, AVCHROMA_LOC_UNSPECIFIED)],
+  [HAVE_AVCODEC_CHROMA_POS_API],
+  [libavcodec avcodec_enum_to_chroma_pos() API])
+
+AX_CHECK_STATEMENT(
+  [libavutil/frame.h],
+  [av_frame_get_qp_table(NULL, NULL, NULL)],
+  [HAVE_AVUTIL_QP_API],
+  [libavutil QP API])
+
+AX_CHECK_STATEMENT(
+  [libavutil/frame.h],
+  [av_frame_unref(NULL)],
+  [HAVE_AVUTIL_REFCOUNTING],
+  [libavutil ref-counting API])
+
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])

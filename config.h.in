@@ -6,8 +6,23 @@
 /* Process priority */
 #undef CONFIG_PRIORITY
 
+/* Define 1 if has libavcodec avcodec_enum_to_chroma_pos() API */
+#undef HAVE_AVCODEC_CHROMA_POS_API
+
 /* Define 1 if has libavresample avresample_set_channel_mapping() API */
 #undef HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING
+
+/* Define 1 if has libavutil QP API */
+#undef HAVE_AVUTIL_QP_API
+
+/* Define 1 if has libavutil ref-counting API */
+#undef HAVE_AVUTIL_REFCOUNTING
+
+/* Define 1 if has libavcodec new vdpau API */
+#undef HAVE_AV_CODEC_NEW_VDPAU_API
+
+/* Define 1 if has libavcodec AV_CODEC_PROP_TEXT_SUB API */
+#undef HAVE_AV_CODEC_PROP_TEXT_SUB
 
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
