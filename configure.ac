@@ -67,10 +67,3 @@ AS_IF([test "$with_libavresample" = "no" &&
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
-
-# XXX: This is for debug only remove me!
-AC_MSG_NOTICE([config files successfully generated! Here is some debug info:
-
-CFLAGS....... : $CFLAGS
-LIBS......... : $LIBS
-])
