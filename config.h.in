@@ -6,6 +6,9 @@
 /* Process priority */
 #undef CONFIG_PRIORITY
 
+/* Have avresample_set_channel_mapping API */
+#undef HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING
+
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
 
