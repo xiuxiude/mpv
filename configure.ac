@@ -66,21 +66,11 @@ AS_IF([test "$with_libavresample" = "no" &&
 ])
 
 AS_IF([test "$with_libavresample" = "yes"], [
-  AC_MSG_CHECKING([for libavresample avresample_set_channel_mapping() API])
-  AC_LINK_IFELSE([
-    AC_LANG_PROGRAM(
-      [[#include <libavresample/avresample.h>]],
-      [[avresample_set_channel_mapping(NULL, NULL);]]
-    )],
-    [
-      AC_DEFINE([HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING], [],
-               [Have avresample_set_channel_mapping API])
-      AC_MSG_RESULT([yes])
-    ],
-    [
-      AC_MSG_RESULT([no])
-    ]
-  )
+  AX_CHECK_STATEMENT(
+    [libavresample/avresample.h],
+    [avresample_set_channel_mapping(NULL, NULL)],
+    [HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING],
+    [libavresample avresample_set_channel_mapping() API])
 ])
 
 AC_CONFIG_MACRO_DIR([m4])

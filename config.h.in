@@ -6,7 +6,7 @@
 /* Process priority */
 #undef CONFIG_PRIORITY
 
-/* Have avresample_set_channel_mapping API */
+/* Define 1 if has libavresample avresample_set_channel_mapping() API */
 #undef HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING
 
 /* Use DOS paths */
