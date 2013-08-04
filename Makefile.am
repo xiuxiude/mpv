@@ -1,3 +1,4 @@
+ACLOCAL_AMFLAGS = -I m4
 bin_PROGRAMS = mpv
 
 mpv_SOURCES = talloc.c \

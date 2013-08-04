@@ -15,18 +15,15 @@
 # with mpv; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-AC_PREREQ([2.62])
+AC_PREREQ([2.69])
 
-AC_INIT([mpv], [1], [mpv-team@googlegroups.com], [http://mpv.io])
+AC_INIT([mpv], m4_esyscmd_s([git describe]), [mpv-team@googlegroups.com],
+        [http://mpv.io])
 configure_flags="$*"
 
 AC_CONFIG_SRCDIR([core/mplayer.c])
 AC_CONFIG_HEADERS([config.h])
-
-AM_INIT_AUTOMAKE([1.6 foreign subdir-objects dist-xz silent-rules])
-m4_ifdef([AM_SILENT_RULES], [
-    AM_SILENT_RULES([yes])
-])
+AM_INIT_AUTOMAKE([1.11 foreign subdir-objects dist-xz silent-rules])
 
 AC_PROG_CC_C99
 AC_CANONICAL_HOST
