@@ -797,7 +797,7 @@ const struct MPOpts mp_default_opts = {
     .field_dominance = -1,
     .sub_auto = 1,
     .osd_bar_visible = 1,
-#ifdef CONFIG_ASS
+#ifdef HAVE_LIBASS
     .ass_enabled = 1,
 #endif
     .sub_scale = 1,
