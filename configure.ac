@@ -49,6 +49,8 @@ AC_DEFINE_UNQUOTED([CONFIGURATION], "$configure_flags",
 
 AX_OSDEP
 
+AX_CHECK_STATEMENT([NANOSLEEP], [nanosleep] [time.h], [nanosleep(0, 0)])
+
 AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
 
