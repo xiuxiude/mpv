@@ -48,13 +48,16 @@
 /* Define 1 if has libavutil ref-counting API */
 #undef HAVE_LIBAVUTIL_REFCOUNTING
 
+/* Define 1 if has libdl */
+#undef HAVE_LIBDL
+
 /* Enable libpostproc support */
 #undef HAVE_LIBPOSTPROC
 
 /* Enable libswresample support */
 #undef HAVE_LIBSWRESAMPLE
 
-/* Define 1 if has nanosleep time.h */
+/* Define 1 if has nanosleep */
 #undef HAVE_NANOSLEEP
 
 /* Define if you have POSIX threads libraries and header files. */
