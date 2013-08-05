@@ -22,6 +22,7 @@
 /autoscan.log
 /stamp-h1
 /build
+/conftest*
 
 /config.h
 /config.mak

@@ -54,11 +54,17 @@
 /* Enable libswresample support */
 #undef HAVE_LIBSWRESAMPLE
 
+/* Define 1 if has nanosleep time.h */
+#undef HAVE_NANOSLEEP
+
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
+
+/* Define 1 if has mman.h */
+#undef HAVE_SYS_MMAN_H
 
 /* Define 1 if libavfilter is usable through af_lavfi */
 #undef LIBAVFILTER_USABLE_WITH_AF_LAVFI
