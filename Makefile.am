@@ -133,6 +133,7 @@ mpv_SOURCES = talloc.c \
               video/filter/vf_noformat.c \
               video/filter/vf_noise.c \
               video/filter/vf_phase.c \
+              video/filter/vf_pp.c \
               video/filter/vf_pullup.c \
               video/filter/vf_rotate.c \
               video/filter/vf_scale.c \
