@@ -151,6 +151,10 @@ mpv_SOURCES = talloc.c \
               video/out/vo_null.c \
               video/out/vo_image.c
 
+if !HAVE_LIBAVUTIL_REFCOUNTING
+  mpv_SOURCES += video/decode/lavc_dr1.c
+endif
+
 core/input/input.c: core/input/input_conf.h
 core/input/input_conf.h: TOOLS/file2string.pl etc/input.conf
 	./$^ >$@
