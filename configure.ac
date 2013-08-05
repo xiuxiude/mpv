@@ -25,6 +25,7 @@ AC_CONFIG_SRCDIR([core/mplayer.c])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign subdir-objects dist-xz silent-rules])
 AM_MAINTAINER_MODE([enable])
+AM_SILENT_RULES([yes])
 
 AC_PROG_CC_C99
 AC_CANONICAL_HOST
