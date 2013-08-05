@@ -82,7 +82,7 @@ static struct af_info* filter_list[] = {
 #ifdef CONFIG_LIBBS2B
     &af_info_bs2b,
 #endif
-#ifdef CONFIG_AF_LAVFI
+#ifdef HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI
     &af_info_lavfi,
 #endif
     // Must come last, because it's the fallback format conversion filter

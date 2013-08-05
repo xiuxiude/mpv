@@ -473,7 +473,7 @@ const m_option_t mp_opts[] = {
 
     // postprocessing:
     OPT_INT("pp", divx_quality, 0),
-#ifdef CONFIG_LIBPOSTPROC
+#ifdef HAVE_LIBPOSTPROC
     {"pphelp", (void *) &pp_help, CONF_TYPE_PRINT, CONF_GLOBAL | CONF_NOCFG, 0, 0, NULL},
 #endif
 

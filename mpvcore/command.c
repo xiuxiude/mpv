@@ -1071,7 +1071,7 @@ static int mp_property_fullscreen(m_option_t *prop,
 
 #define VF_DEINTERLACE_LABEL "deinterlace"
 
-#ifdef CONFIG_VF_LAVFI
+#ifdef HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI
 #define VF_DEINTERLACE "@" VF_DEINTERLACE_LABEL ":lavfi=yadif"
 #else
 #define VF_DEINTERLACE "@" VF_DEINTERLACE_LABEL ":yadif"

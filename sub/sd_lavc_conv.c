@@ -40,7 +40,7 @@ static bool supports_format(const char *format)
     const AVCodecDescriptor *desc = avcodec_descriptor_get(cid);
     if (!desc)
         return false;
-#if HAVE_AV_CODEC_PROP_TEXT_SUB
+#ifdef HAVE_LIBAVCODEC_PROP_TEXT_SUB
     // These are documented to support AVSubtitleRect->ass.
     return desc->props & AV_CODEC_PROP_TEXT_SUB;
 #else

@@ -34,7 +34,9 @@
 
 #if defined(HAVE_LIBAVRESAMPLE)
 #include <libavresample/avresample.h>
-#define USE_SET_CHANNEL_MAPPING HAVE_AVRESAMPLE_SET_CHANNEL_MAPPING
+#ifdef HAVE_LIBAVRESAMPLE_SET_CHANNEL_MAPPING
+#define USE_SET_CHANNEL_MAPPING 1
+#endif
 #elif defined(HAVE_LIBSWRESAMPLE)
 #include <libswresample/swresample.h>
 #define AVAudioResampleContext SwrContext
@@ -228,7 +230,7 @@ static int control(struct af_instance *af, int cmd, void *arg)
             av_opt_set_int(s->avrctx_out, "in_sample_rate", s->ctx.out_rate, 0);
             av_opt_set_int(s->avrctx_out, "out_sample_rate", s->ctx.out_rate, 0);
 
-#if USE_SET_CHANNEL_MAPPING
+#ifdef USE_SET_CHANNEL_MAPPING
             // API has weird requirements, quoting avresample.h:
             //  * This function can only be called when the allocated context is not open.
             //  * Also, the input channel layout must have already been set.
@@ -309,7 +311,7 @@ static struct mp_audio *play(struct af_instance *af, struct mp_audio *data)
                                           s->ctx.out_rate, s->ctx.in_rate,
                                           AV_ROUND_UP);
 
-#if !USE_SET_CHANNEL_MAPPING
+#ifndef USE_SET_CHANNEL_MAPPING
     reorder_channels(data->audio, s->reorder_in, data->bps, data->nch, in_samples);
 #endif
 
@@ -319,7 +321,7 @@ static struct mp_audio *play(struct af_instance *af, struct mp_audio *data)
 
     *data = *out;
 
-#if USE_SET_CHANNEL_MAPPING
+#ifdef USE_SET_CHANNEL_MAPPING
     if (needs_reorder(s->reorder_out, out->nch)) {
         if (talloc_get_size(s->reorder_buffer) < out_size)
             s->reorder_buffer = talloc_realloc_size(s, s->reorder_buffer, out_size);

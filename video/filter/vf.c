@@ -83,10 +83,10 @@ static const vf_info_t *const filter_list[] = {
     &vf_info_rotate,
     &vf_info_mirror,
 
-#ifdef CONFIG_LIBPOSTPROC
+#ifdef HAVE_LIBPOSTPROC
     &vf_info_pp,
 #endif
-#ifdef CONFIG_VF_LAVFI
+#ifdef HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI
     &vf_info_lavfi,
 #endif
 

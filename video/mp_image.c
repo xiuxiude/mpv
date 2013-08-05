@@ -540,7 +540,7 @@ void mp_image_copy_fields_from_av_frame(struct mp_image *dst,
     if (src->repeat_pict == 1)
         dst->fields |= MP_IMGFIELD_REPEAT_FIRST;
 
-#if HAVE_AVUTIL_QP_API
+#ifdef HAVE_LIBAVUTIL_QP_API
     dst->qscale = av_frame_get_qp_table(src, &dst->qstride, &dst->qscale_type);
 #else
     dst->qscale = src->qscale_table;
@@ -548,9 +548,6 @@ void mp_image_copy_fields_from_av_frame(struct mp_image *dst,
     dst->qscale_type = src->qscale_type;
 #endif
 }
-
-// Not strictly related, but was added in a similar timeframe.
-#define HAVE_AVFRAME_COLORSPACE HAVE_AVCODEC_CHROMA_POS_API
 
 // Copy properties and data of the mp_image into the AVFrame, without taking
 // care of memory management issues.
@@ -575,13 +572,14 @@ void mp_image_copy_fields_to_av_frame(struct AVFrame *dst,
     if (src->fields & MP_IMGFIELD_REPEAT_FIRST)
         dst->repeat_pict = 1;
 
-#if HAVE_AVFRAME_COLORSPACE
+// Not strictly related, but was added in a similar timeframe.
+#ifdef HAVE_LIBAVCODEC_CHROMA_POS_API
     dst->colorspace = mp_csp_to_avcol_spc(src->colorspace);
     dst->color_range = mp_csp_levels_to_avcol_range(src->levels);
 #endif
 }
 
-#if HAVE_AVUTIL_REFCOUNTING
+#ifdef HAVE_LIBAVUTIL_REFCOUNTING
 
 static void frame_free(void *p)
 {
@@ -641,4 +639,4 @@ struct AVFrame *mp_image_to_av_frame_and_unref(struct mp_image *img)
     return frame;
 }
 
-#endif /* HAVE_AVUTIL_REFCOUNTING */
+#endif /* HAVE_LIBAVUTIL_REFCOUNTING */
