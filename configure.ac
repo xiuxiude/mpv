@@ -52,19 +52,19 @@ AX_OSDEP
 AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
 
-AS_IF([test "$with_libav" = "no"], [
+AS_IF([test "x$with_libav" = "xno"], [
   AC_MSG_ERROR(["Unable to find development files for libav. Aborting."])
 ])
 
 AX_PKG_ADD([LIBAVRESAMPLE], [libavresample >= 1.0.0])
 AX_PKG_ADD([LIBSWRESAMPLE], [libswresample >= 0.17.102])
 
-AS_IF([test "$with_libavresample" = "no" &&
-       test "$with_libswresample" = "no"], [
+AS_IF([test "x$with_libavresample" = "xno" &&
+       test "x$with_libswresample" = "xno"], [
   AC_MSG_ERROR(["No resampler found. Install libavresample or libswresample."])
 ])
 
-AS_IF([test "$with_libavresample" = "yes"], [
+AS_IF([test "x$with_libavresample" = "xyes"], [
   AX_CHECK_STATEMENT(
     [LIBAVRESAMPLE_SET_CHANNEL_MAPPING], [libavresample set_channel_mapping API],
     [libavresample/avresample.h],
@@ -117,13 +117,13 @@ AX_CC_CHECK(
     }
   ])
 
-AS_IF([test "$have_libavfilter_not_old_or_broken" = "no"], [
+AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xno"], [
   AX_POP_BUILD_FLAGS
 ])
 
 AC_MSG_CHECKING([if libavfilter is usable through vf_lavfi])
-AS_IF([test "$have_libavfilter_not_old_or_broken" = "yes"], [
-  AS_IF([test "$have_libavutil_refcounting" = "yes"], [
+AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
+  AS_IF([test "x$have_libavutil_refcounting" = "xyes"], [
     AC_DEFINE([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [],
               [Define 1 if libavfilter is usable through vf_lavfi])
     AC_MSG_RESULT([yes])
@@ -135,8 +135,8 @@ AS_IF([test "$have_libavfilter_not_old_or_broken" = "yes"], [
 ])
 
 AC_MSG_CHECKING([if libavfilter is usable through af_lavfi])
-AS_IF([test "$have_libavfilter_not_old_or_broken" = "yes"], [
-  AS_IF([test "$have_libavutil_opt_set_int_list" = "yes"], [
+AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
+  AS_IF([test "x$have_libavutil_opt_set_int_list" = "xyes"], [
     AC_DEFINE([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [],
               [Define 1 if libavfilter is usable through af_lavfi])
     AC_MSG_RESULT([yes])
@@ -149,6 +149,14 @@ AS_IF([test "$have_libavfilter_not_old_or_broken" = "yes"], [
 
 AX_PKG_ADD([LIBAVDEVICE], [libavdevice >= 54.0.0])
 AX_PKG_ADD([LIBPOSTPROC], [libpostproc >= 52.0.0])
+
+AX_PKG_ADD([LIBASS], [libass])
+
+AC_ARG_ENABLE([libass_osd],
+  AS_HELP_STRING([--disable-libass-osd], [Disable libass OSD support]))
+
+AM_CONDITIONAL(HAVE_LIBASS_OSD,
+  [test "x$enable_libass_osd" != "xno" && test "x$with_libass" = "xyes"])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])

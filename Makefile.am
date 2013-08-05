@@ -10,7 +10,7 @@ mpv_SOURCES = talloc.c \
               audio/mixer.c \
               audio/reorder_ch.c \
               audio/decode/ad_lavc.c \
-              audio/decode/ad_spdif.c      \
+              audio/decode/ad_spdif.c \
               audio/decode/dec_audio.c \
               audio/filter/af.c \
               audio/filter/af_center.c \
@@ -133,7 +133,6 @@ mpv_SOURCES = talloc.c \
               video/filter/vf_noformat.c \
               video/filter/vf_noise.c \
               video/filter/vf_phase.c \
-              video/filter/vf_pp.c \
               video/filter/vf_pullup.c \
               video/filter/vf_rotate.c \
               video/filter/vf_scale.c \
@@ -152,8 +151,22 @@ mpv_SOURCES = talloc.c \
               video/out/vo_null.c \
               video/out/vo_image.c
 
+if HAVE_LIBPOSTPROC
+  mpv_SOURCES += video/filter/vf_pp.c
+endif
+
 if !HAVE_LIBAVUTIL_REFCOUNTING
   mpv_SOURCES += video/decode/lavc_dr1.c
+endif
+
+if HAVE_LIBASS
+  mpv_SOURCES += sub/ass_mp.c sub/sd_ass.c demux/demux_libass.c
+endif
+
+if HAVE_LIBASS_OSD
+  mpv_SOURCES += sub/osd_libass.c
+else
+  mpv_SOURCES += sub/osd_dummy.c
 endif
 
 core/input/input.c: core/input/input_conf.h

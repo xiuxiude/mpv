@@ -9,6 +9,9 @@
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
 
+/* Enable libass support */
+#undef HAVE_LIBASS
+
 /* Enable libav support */
 #undef HAVE_LIBAV
 
