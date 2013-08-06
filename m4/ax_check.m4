@@ -7,15 +7,15 @@ AC_DEFUN([AX_CHECK_SILENT], [
     [
       AC_DEFINE([HAVE_][$1], [], [Define 1 if has $2])
       AS_TR_SH([have_]m4_tolower([$1]))="yes"
+      AM_CONDITIONAL([HAVE_][$1], [true])
       $4
     ],
     [
       AS_TR_SH([have_]m4_tolower([$1]))="no"
+      AM_CONDITIONAL([HAVE_][$1], [false])
       $5
     ]
   )
-  AM_CONDITIONAL([HAVE_][$1],
-                 [test "$AS_TR_SH([with_]m4_tolower([$1]))" = "yes"])
 ])
 
 AC_DEFUN([AX_CC_CHECK_BASE], [
@@ -71,4 +71,18 @@ AC_DEFUN([AX_CC_CHECK_BASE_LIBS], [
 
 AC_DEFUN([AX_CHECK_STATEMENT_LIBS], [
   AX_CC_CHECK_BASE_LIBS([$1],[$2],[$3],[[AC_LANG_PROGRAM([[#include <$4>]], [[$5;]])]])
+])
+
+AC_DEFUN([AX_CHECK_CONDITION], [
+  AC_MSG_CHECKING([for $2])
+  AS_IF([$3], [
+    AC_DEFINE([HAVE_][$1], [1], [Define 1 if has $2])
+    AM_CONDITIONAL([HAVE_][$1], [true])
+    AS_TR_SH([have_]m4_tolower([$1]))="yes"
+    AC_MSG_RESULT([yes])
+  ], [
+    AM_CONDITIONAL([HAVE_][$1], [false])
+    AS_TR_SH([have_]m4_tolower([$1]))="no"
+    AC_MSG_RESULT([no])
+  ])
 ])

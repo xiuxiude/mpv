@@ -149,7 +149,15 @@ mpv_SOURCES = \
     video/out/filter_kernels.c \
     video/out/vo.c \
     video/out/vo_null.c \
-    video/out/vo_image.c \
+    video/out/vo_image.c
+
+if HAVE_SYS_MMAN_H
+  mpv_SOURCES += audio/filter/af_export.c
+endif
+
+if HAVE_STREAM_CACHE
+  mpv_SOURCES += stream/cache.c
+endif
 
 if HAVE_LIBPOSTPROC
   mpv_SOURCES += video/filter/vf_pp.c

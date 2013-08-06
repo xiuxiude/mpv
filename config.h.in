@@ -66,6 +66,9 @@
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
 
+/* Define 1 if has stream cache */
+#undef HAVE_STREAM_CACHE
+
 /* Define 1 if has mman.h */
 #undef HAVE_SYS_MMAN_H
 

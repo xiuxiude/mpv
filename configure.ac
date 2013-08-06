@@ -21,7 +21,7 @@ AC_INIT([mpv], m4_esyscmd_s([git describe]), [mpv-team@googlegroups.com],
         [mpv], [http://mpv.io])
 configure_flags="$*"
 
-AC_CONFIG_SRCDIR([core/mplayer.c])
+AC_CONFIG_SRCDIR([mpvcore/mplayer.c])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign subdir-objects dist-xz silent-rules])
 AM_MAINTAINER_MODE([enable])
@@ -54,6 +54,9 @@ AX_CHECK_STATEMENT(
   [SYS_MMAN_H], [mman.h], [sys/mman.h], [mmap(0, 0, 0, 0, 0, 0)])
 
 AX_CHECK_STATEMENT_LIBS(["" "-ldl"], [LIBDL], [libdl], [dlfcn.h], [dlopen("", 0)])
+
+AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
+                   [test "x$ax_pthread_ok" = "xyes"])
 
 AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
