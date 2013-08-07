@@ -1,18 +1,27 @@
-# Convenience macro to run AM_CONDITIONAL, AC_DEFINE and to define a shell
-# variable after running a compilation check of some sort
+# Convenience macros to run AM_CONDITIONAL, AC_DEFINE and to define a shell
+# variable after running a compilation or conditional check of some sort
 # ----------------------------------------------------------------------------
+
+AC_DEFUN([AX_CHECK_PASSED], [
+  AC_DEFINE([HAVE_][$1], [], [Define 1 if has $2])
+  AS_TR_SH([have_]m4_tolower([$1]))="yes"
+  AM_CONDITIONAL([HAVE_][$1], [true])
+])
+
+AC_DEFUN([AX_CHECK_FAILED], [
+  AS_TR_SH([have_]m4_tolower([$1]))="no"
+  AM_CONDITIONAL([HAVE_][$1], [false])
+])
+
 AC_DEFUN([AX_CHECK_SILENT], [
   AC_LINK_IFELSE(
     $3,
     [
-      AC_DEFINE([HAVE_][$1], [], [Define 1 if has $2])
-      AS_TR_SH([have_]m4_tolower([$1]))="yes"
-      AM_CONDITIONAL([HAVE_][$1], [true])
+      AX_CHECK_PASSED([$1], [$2])
       $4
     ],
     [
-      AS_TR_SH([have_]m4_tolower([$1]))="no"
-      AM_CONDITIONAL([HAVE_][$1], [false])
+      AX_CHECK_FAILED([$1])
       $5
     ]
   )
@@ -76,13 +85,10 @@ AC_DEFUN([AX_CHECK_STATEMENT_LIBS], [
 AC_DEFUN([AX_CHECK_CONDITION], [
   AC_MSG_CHECKING([for $2])
   AS_IF([$3], [
-    AC_DEFINE([HAVE_][$1], [1], [Define 1 if has $2])
-    AM_CONDITIONAL([HAVE_][$1], [true])
-    AS_TR_SH([have_]m4_tolower([$1]))="yes"
+    AX_CHECK_PASSED([$1], [$2])
     AC_MSG_RESULT([yes])
   ], [
-    AM_CONDITIONAL([HAVE_][$1], [false])
-    AS_TR_SH([have_]m4_tolower([$1]))="no"
+    AX_CHECK_FAILED([$1])
     AC_MSG_RESULT([no])
   ])
 ])
