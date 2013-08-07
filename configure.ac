@@ -59,6 +59,8 @@ AX_CHECK_STATEMENT_LIBS(
 AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
                    [test "x$ax_pthread_ok" = "xyes"])
 
+AX_ICONV
+
 AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0
    libavformat > 54.19.0 libswscale >= 2.0.0])

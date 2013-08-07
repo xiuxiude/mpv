@@ -9,6 +9,9 @@
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
 
+/* Define 1 if has iconv */
+#undef HAVE_ICONV
+
 /* Enable libass support */
 #undef HAVE_LIBASS
 
