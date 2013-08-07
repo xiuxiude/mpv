@@ -60,9 +60,10 @@ AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
                    [test "x$ax_pthread_ok" = "xyes"])
 
 AX_ICONV
+# XXX: add gettext tests
 
-# XXX: add HAVE_SOUNDCARD_H check
-# XXX: add HAVE_SYS_VIDEOIO_H check
+AC_CHECK_HEADERS([soundcard.h sys/soundcard.h], [break])
+AC_CHECK_HEADERS([sys/videoio.h])
 
 AX_CHECK_STATEMENT_LIBS(
   ["-lncurses" "-lncursesw"], [TERMINFO], [terminfo],
@@ -72,11 +73,7 @@ AX_CHECK_STATEMENT_LIBS(
   ["-lncurses" "-ltinfo" "-ltermcap"], [TERMCAP], [termcap],
   [term.h], [tgetent(0, 0)])
 
-AC_CHECK_HEADERS([termios.h])
-AS_IF([test "x$ac_cv_header_termios_h" = "xno"], [
-  AC_CHECK_HEADERS([sys/termios.h])
-])
-
+AC_CHECK_HEADERS([termios.h sys/termios.h], [break])
 AS_IF([test "x$ac_cv_header_termios_h" = "xyes" ||
        test "x$ac_cv_header_sys_termios_h" = "xyes"], [
   AC_DEFINE([HAVE_TERMIOS], [1], [Define to 1 if there is termios support])
