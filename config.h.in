@@ -12,6 +12,9 @@
 /* Define 1 if has iconv */
 #undef HAVE_ICONV
 
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
 /* Enable libass support */
 #undef HAVE_LIBASS
 
@@ -60,8 +63,14 @@
 /* Enable libswresample support */
 #undef HAVE_LIBSWRESAMPLE
 
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
 /* Define 1 if has nanosleep */
 #undef HAVE_NANOSLEEP
+
+/* Define 1 if has POSIX select() */
+#undef HAVE_POSIX_SELECT
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
@@ -69,11 +78,50 @@
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
 
+/* Define 1 if has shm */
+#undef HAVE_SHM
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
 /* Define 1 if has stream cache */
 #undef HAVE_STREAM_CACHE
 
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
 /* Define 1 if has mman.h */
 #undef HAVE_SYS_MMAN_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/termios.h> header file. */
+#undef HAVE_SYS_TERMIOS_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define 1 if has termcap */
+#undef HAVE_TERMCAP
+
+/* Define 1 if has terminfo */
+#undef HAVE_TERMINFO
+
+/* Define to 1 if there is termios support */
+#undef HAVE_TERMIOS
+
+/* Define to 1 if you have the <termios.h> header file. */
+#undef HAVE_TERMIOS_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
 
 /* Define 1 if libavfilter is usable through af_lavfi */
 #undef LIBAVFILTER_USABLE_WITH_AF_LAVFI
@@ -111,6 +159,9 @@
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
 
 /* Version number of package */
 #undef VERSION

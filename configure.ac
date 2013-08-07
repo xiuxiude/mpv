@@ -61,6 +61,39 @@ AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
 
 AX_ICONV
 
+# XXX: add HAVE_SOUNDCARD_H check
+# XXX: add HAVE_SYS_VIDEOIO_H check
+
+AX_CHECK_STATEMENT_LIBS(
+  ["-lncurses" "-lncursesw"], [TERMINFO], [terminfo],
+  [term.h], [setupterm(0, 1, 0)])
+
+AX_CHECK_STATEMENT_LIBS(
+  ["-lncurses" "-ltinfo" "-ltermcap"], [TERMCAP], [termcap],
+  [term.h], [tgetent(0, 0)])
+
+AC_CHECK_HEADERS([termios.h])
+AS_IF([test "x$ac_cv_header_termios_h" = "xno"], [
+  AC_CHECK_HEADERS([sys/termios.h])
+])
+
+AS_IF([test "x$ac_cv_header_termios_h" = "xyes" ||
+       test "x$ac_cv_header_sys_termios_h" = "xyes"], [
+  AC_DEFINE([HAVE_TERMIOS], [1], [Define to 1 if there is termios support])
+])
+
+AX_CHECK_STATEMENT(
+  [SHM], [shm], [sys/shm.h], [shmget(0, 0, 0); shmat(0, 0, 0); shmctl(0, 0, 0)])
+
+AX_CHECK_STATEMENT(
+  [POSIX_SELECT], [POSIX select()],
+  [sys/select.h], [
+    int rc;
+    rc = select(0, (fd_set *)(0), (fd_set *)(0), (fd_set *)(0),
+                (struct timeval *)(0));
+  ]
+)
+
 AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0
    libavformat > 54.19.0 libswscale >= 2.0.0])
