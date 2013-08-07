@@ -53,13 +53,15 @@ AX_CHECK_STATEMENT([NANOSLEEP], [nanosleep], [time.h], [nanosleep(0, 0)])
 AX_CHECK_STATEMENT(
   [SYS_MMAN_H], [mman.h], [sys/mman.h], [mmap(0, 0, 0, 0, 0, 0)])
 
-AX_CHECK_STATEMENT_LIBS(["" "-ldl"], [LIBDL], [libdl], [dlfcn.h], [dlopen("", 0)])
+AX_CHECK_STATEMENT_LIBS(
+  ["" "-ldl"], [LIBDL], [libdl], [dlfcn.h], [dlopen("", 0)])
 
 AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
                    [test "x$ax_pthread_ok" = "xyes"])
 
 AX_PKG_ADD([LIBAV],
-  [libavutil > 51.73.0 libavcodec > 54.34.0 libavformat > 54.19.0 libswscale >= 2.0.0])
+  [libavutil > 51.73.0 libavcodec > 54.34.0
+   libavformat > 54.19.0 libswscale >= 2.0.0])
 
 AS_IF([test "x$with_libav" = "xno"], [
   AC_MSG_ERROR(["Unable to find development files for libav. Aborting."])
