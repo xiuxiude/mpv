@@ -6,6 +6,9 @@
 /* Process priority */
 #undef CONFIG_PRIORITY
 
+/* Define to 1 to use select() on audio devices */
+#undef HAVE_AUDIO_SELECT
+
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
 

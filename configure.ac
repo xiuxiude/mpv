@@ -204,7 +204,7 @@ AX_PKG_ADD([LIBPOSTPROC], [libpostproc >= 52.0.0])
 AX_PKG_ADD([LIBASS], [libass])
 
 AC_ARG_ENABLE([libass_osd],
-  AS_HELP_STRING([--disable-libass-osd], [Disable libass OSD support]))
+  AS_HELP_STRING([--disable-libass-osd], [disable libass OSD support]))
 
 AM_CONDITIONAL(HAVE_LIBASS_OSD,
   [test "x$enable_libass_osd" != "xno" && test "x$with_libass" = "xyes"])
