@@ -53,8 +53,8 @@ AX_CHECK_STATEMENT([NANOSLEEP], [nanosleep], [time.h], [nanosleep(0, 0)])
 AX_CHECK_STATEMENT(
   [SYS_MMAN_H], [mman.h], [sys/mman.h], [mmap(0, 0, 0, 0, 0, 0)])
 
-AX_CHECK_STATEMENT_LIBS(
-  ["" "-ldl"], [LIBDL], [libdl], [dlfcn.h], [dlopen("", 0)])
+AC_SEARCH_LIBS([dlopen], [dl],
+  [AC_DEFINE([HAVE_LIBDL], [1], [Define 1 if has libdl])])
 
 AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
                    [test "x$ax_pthread_ok" = "xyes"])
