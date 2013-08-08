@@ -91,6 +91,14 @@ AX_CHECK_STATEMENT(
   ]
 )
 
+AC_ARG_ENABLE([audio_select],
+  AS_HELP_STRING([--disable-audio-select],
+                 [disable using select() on the audio device]))
+AS_IF([test "x$enable_audio_select" != "xno"], [
+  AC_DEFINE([HAVE_AUDIO_SELECT], [1],
+            [Define to 1 to use select() on audio devices])
+])
+
 AX_PKG_ADD([LIBAV],
   [libavutil > 51.73.0 libavcodec > 54.34.0
    libavformat > 54.19.0 libswscale >= 2.0.0])
