@@ -15,7 +15,7 @@
 /config.status
 /config.guess
 /config.sub
-/config.h.in~
+/config.h.*
 /depcomp
 /install-sh
 /missing
