@@ -54,8 +54,12 @@ AX_CHECK_STATEMENT([NANOSLEEP], [nanosleep], [time.h], [nanosleep(0, 0)])
 AX_CHECK_STATEMENT(
   [SYS_MMAN_H], [mman.h], [sys/mman.h], [mmap(0, 0, 0, 0, 0, 0)])
 
-AC_SEARCH_LIBS([dlopen], [dl],
-  [AC_DEFINE([HAVE_LIBDL], [1], [Define 1 if has libdl])])
+AC_SEARCH_LIBS([dlopen], [dl], [
+  AC_DEFINE([HAVE_LIBDL], [1], [Define 1 if has libdl])
+  AM_CONDITIONAL([HAVE_LIBDL], [true])
+], [
+  AM_CONDITIONAL([HAVE_LIBDL], [false])
+])
 
 AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
                    [test "x$ax_pthread_ok" = "xyes"])
@@ -188,11 +192,14 @@ AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
   AS_IF([test "x$have_libavutil_refcounting" = "xyes"], [
     AC_DEFINE([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [],
               [Define 1 if libavfilter is usable through vf_lavfi])
+    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [true])
     AC_MSG_RESULT([yes])
   ],[
+    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
     AC_MSG_RESULT([no (libavutil too old)])
   ])
 ],[
+  AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
   AC_MSG_RESULT([no])
 ])
 
@@ -201,11 +208,14 @@ AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
   AS_IF([test "x$have_libavutil_opt_set_int_list" = "xyes"], [
     AC_DEFINE([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [],
               [Define 1 if libavfilter is usable through af_lavfi])
+    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [true])
     AC_MSG_RESULT([yes])
   ],[
+    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
     AC_MSG_RESULT([no (libavutil too old)])
   ])
 ],[
+  AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
   AC_MSG_RESULT([no])
 ])
 

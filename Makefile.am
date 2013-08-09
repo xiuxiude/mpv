@@ -155,6 +155,10 @@ if HAVE_SYS_MMAN_H
   mpv_SOURCES += audio/filter/af_export.c
 endif
 
+if HAVE_LIBDL
+  mpv_SOURCES += video/filter/vf_dlopen.c
+endif
+
 if HAVE_STREAM_CACHE
   mpv_SOURCES += stream/cache.c
 endif
@@ -165,6 +169,14 @@ endif
 
 if !HAVE_LIBAVUTIL_REFCOUNTING
   mpv_SOURCES += video/decode/lavc_dr1.c
+endif
+
+if LIBAVFILTER_USABLE_WITH_AF_LAVFI
+  mpv_SOURCES += audio/filter/af_lavfi.c
+endif
+
+if LIBAVFILTER_USABLE_WITH_VF_LAVFI
+  mpv_SOURCES += video/filter/vf_lavfi.c
 endif
 
 if HAVE_LIBASS
@@ -179,6 +191,14 @@ endif
 
 if HAVE_LIBSMBCLIENT
   mpv_SOURCES += stream/stream_smb.c
+endif
+
+if HAVE_LIBQUVI4
+  mpv_SOURCES += mpvcore/resolve_quvi.c
+endif
+
+if HAVE_LIBQUVI9
+  mpv_SOURCES += mpvcore/resolve_quvi9.c
 endif
 
 mpvcore/input/input.c: mpvcore/input/input_conf.h
