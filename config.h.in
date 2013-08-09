@@ -12,6 +12,9 @@
 /* Use DOS paths */
 #undef HAVE_DOS_PATHS
 
+/* Define 1 if has glob() */
+#undef HAVE_GLOB
+
 /* Define 1 if has iconv */
 #undef HAVE_ICONV
 
@@ -60,8 +63,20 @@
 /* Define 1 if has libdl */
 #undef HAVE_LIBDL
 
+/* Enable libguess support */
+#undef HAVE_LIBGUESS
+
 /* Enable libpostproc support */
 #undef HAVE_LIBPOSTPROC
+
+/* Enable libquvi4 support */
+#undef HAVE_LIBQUVI4
+
+/* Enable libquvi9 support */
+#undef HAVE_LIBQUVI9
+
+/* Define 1 if has Samba support (libsmbclient) */
+#undef HAVE_LIBSMBCLIENT
 
 /* Enable libswresample support */
 #undef HAVE_LIBSWRESAMPLE
@@ -80,6 +95,9 @@
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
+
+/* Define 1 if has setmode() */
+#undef HAVE_SETMODE
 
 /* Define 1 if has shm */
 #undef HAVE_SHM
@@ -110,6 +128,9 @@
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/sysinfo.h> header file. */
+#undef HAVE_SYS_SYSINFO_H
 
 /* Define to 1 if you have the <sys/termios.h> header file. */
 #undef HAVE_SYS_TERMIOS_H

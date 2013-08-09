@@ -30,6 +30,7 @@ AM_SILENT_RULES([yes])
 AC_PROG_CC_C99
 AC_CANONICAL_HOST
 
+# XXX: doesn't look like this adds -lrt and from bfe0207a7 it seems needed
 AX_PTHREAD([
   LIBS="$PTHREAD_LIBS $LIBS"
   CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
@@ -58,6 +59,8 @@ AC_SEARCH_LIBS([dlopen], [dl],
 
 AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
                    [test "x$ax_pthread_ok" = "xyes"])
+
+# XXX: rpath test
 
 AX_ICONV
 # XXX: add gettext tests
@@ -216,6 +219,23 @@ AC_ARG_ENABLE([libass_osd],
 
 AM_CONDITIONAL(HAVE_LIBASS_OSD,
   [test "x$enable_libass_osd" != "xno" && test "x$with_libass" = "xyes"])
+
+AX_PKG_ADD([LIBGUESS], [libguess >= 1.0])
+
+AX_CHECK_STATEMENT_LIBS(
+  ["-lsmbclient" "-lsmbclient -lnsl" "-lsmbclient -lnsl -lssl"],
+  [LIBSMBCLIENT], [Samba support (libsmbclient)],
+  [libsmbclient.h], [smbc_opendir("smb://")])
+
+AX_PKG_ADD([LIBQUVI4], [libquvi >= 0.4.1])
+
+AS_IF([test "x$with_libquvi4" = "xno"], [
+  AX_PKG_ADD([LIBQUVI9], [libquvi >= 0.9.0])
+], [
+  # AM_CONDITIONAL must be invoked on all branches. Since AX_PKG_ADD invokes
+  # it, invoke it here as well to 'disable' LIBQUVI9
+  AM_CONDITIONAL([HAVE_LIBQUVI9], [false])
+])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
