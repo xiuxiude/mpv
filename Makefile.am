@@ -177,6 +177,10 @@ else
   mpv_SOURCES += sub/osd_dummy.c
 endif
 
+if HAVE_LIBSMBCLIENT
+  mpv_SOURCES += stream/stream_smb.c
+endif
+
 mpvcore/input/input.c: mpvcore/input/input_conf.h
 mpvcore/input/input_conf.h: TOOLS/file2string.pl etc/input.conf
 	./$^ >$@
