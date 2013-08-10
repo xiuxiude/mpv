@@ -172,7 +172,6 @@ AX_PKG_ADD([LIBAVFILTER], [libavfilter])
 
 AX_CC_CHECK(
   [LIBAVFILTER_NOT_OLD_OR_BROKEN], [libavfilter not old or broken],
-  [libavfilter/avfilter.h],
   [
     #include <libavfilter/avfilter.h>
     void vf_next_query_format() {}
