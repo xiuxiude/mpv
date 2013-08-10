@@ -10,6 +10,7 @@
 /autom4te.cache
 /Makefile.in
 /Makefile
+/compile
 /confdefs.h
 /configure.scan
 /config.status
