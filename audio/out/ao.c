@@ -54,7 +54,7 @@ extern const struct ao_driver audio_out_sdl;
 
 static const struct ao_driver * const audio_out_drivers[] = {
 // native:
-#ifdef CONFIG_COREAUDIO
+#ifdef HAVE_COREAUDIO
     &audio_out_coreaudio,
 #endif
 #ifdef CONFIG_PULSE
