@@ -222,6 +222,12 @@ if HAVE_COREVIDEO
   mpv_SOURCES += video/out/vo_corevideo.c
 endif
 
+if HAVE_COREAUDIO
+  mpv_SOURCES += audio/out/ao_coreaudio.c \
+                 audio/out/ao_coreaudio_utils.c \
+                 audio/out/ao_coreaudio_properties.c
+endif
+
 mpvcore/input/input.c: mpvcore/input/input_conf.h
 mpvcore/input/input_conf.h: TOOLS/file2string.pl etc/input.conf
 	./$^ >$@

@@ -289,5 +289,17 @@ AS_IF([test "x$have_corevideo" = "xno"], [
   AX_POP_BUILD_FLAGS
 ])
 
+AX_STASH_BUILD_FLAGS
+LIBS="$LIBS -framework CoreAudio -framework AudioUnit -framework AudioToolbox"
+AX_CC_CHECK([COREAUDIO], [CoreaAudio], [
+  #include <CoreAudio/CoreAudio.h>
+  #include <AudioToolbox/AudioToolbox.h>
+  #include <AudioUnit/AudioUnit.h>
+  int main(void) { return 0; }
+])
+AS_IF([test "x$have_coreaudio" = "xno"], [
+  AX_POP_BUILD_FLAGS
+])
+
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
