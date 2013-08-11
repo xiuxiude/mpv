@@ -36,7 +36,7 @@
 #include "memcpy_pic.h"
 #include "fmt-conversion.h"
 
-#if HAVE_PTHREADS
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 static pthread_mutex_t refcount_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define refcount_lock() pthread_mutex_lock(&refcount_mutex)

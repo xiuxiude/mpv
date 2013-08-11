@@ -29,7 +29,7 @@
 
 #include "mp_image_pool.h"
 
-#if HAVE_PTHREADS
+#ifdef HAVE_PTHREAD
 #include <pthread.h>
 static pthread_mutex_t pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define pool_lock() pthread_mutex_lock(&pool_mutex)
