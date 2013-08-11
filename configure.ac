@@ -37,6 +37,12 @@ AX_PTHREAD([
   CC="$PTHREAD_CC"
 ])
 
+# XXX: I think the macro is bugged, consider patching that
+AS_IF([test "x$ax_pthread_ok" = "xyes"], [
+  AC_DEFINE([HAVE_PTHREAD], [1],
+            [Define if you have POSIX threads libraries and header files.])
+])
+
 # XXX: this generates stuff like `#define MPLAYER_CONFDIR "${prefix}/etc/mpv"`
 # this is a good thing since it respects the GNU coding standards and makes
 # the package relocatable. See http://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.69/html_node/Defining-Directories.html
