@@ -67,14 +67,14 @@ const struct vo_driver *video_out_drivers[] =
 #if CONFIG_VDPAU
         &video_out_vdpau,
 #endif
-#ifdef CONFIG_GL
+#ifdef HAVE_OPENGL
         &video_out_opengl,
 #endif
 #ifdef CONFIG_DIRECT3D
         &video_out_direct3d_shaders,
         &video_out_direct3d,
 #endif
-#ifdef CONFIG_COREVIDEO
+#ifdef HAVE_COREVIDEO
         &video_out_corevideo,
 #endif
 #ifdef CONFIG_XV
@@ -83,7 +83,7 @@ const struct vo_driver *video_out_drivers[] =
 #ifdef CONFIG_SDL2
         &video_out_sdl,
 #endif
-#ifdef CONFIG_GL
+#ifdef HAVE_OPENGL
         &video_out_opengl_old,
 #endif
 #ifdef CONFIG_X11
@@ -98,7 +98,7 @@ const struct vo_driver *video_out_drivers[] =
 #ifdef CONFIG_ENCODING
         &video_out_lavc,
 #endif
-#ifdef CONFIG_GL
+#ifdef HAVE_OPENGL
         &video_out_opengl_hq,
 #endif
         NULL

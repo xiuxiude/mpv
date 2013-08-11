@@ -612,7 +612,7 @@ const m_option_t mp_opts[] = {
     OPT_CHOICE_OR_INT("fs-screen", vo.fsscreen_id, 0, 0, 32,
                       ({"all", -2}, {"current", -1})),
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     OPT_FLAG("native-fs", vo.native_fs, 0),
 #endif
 
@@ -827,7 +827,7 @@ const struct MPOpts mp_default_opts = {
         .use_joystick = 1,
         .use_lirc = 1,
         .use_lircc = 1,
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
         .use_ar = 1,
         .use_media_keys = 1,
 #endif

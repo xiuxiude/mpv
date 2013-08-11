@@ -60,7 +60,7 @@
 #include <lirc/lircc.h>
 #endif
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
 #include "osdep/macosx_events.h"
 #endif
 
@@ -582,7 +582,7 @@ const m_option_t mp_input_opts[] = {
     OPT_FLAG("joystick", input.use_joystick, CONF_GLOBAL),
     OPT_FLAG("lirc", input.use_lirc, CONF_GLOBAL),
     OPT_FLAG("lircc", input.use_lircc, CONF_GLOBAL),
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     OPT_FLAG("ar", input.use_ar, CONF_GLOBAL),
     OPT_FLAG("media-keys", input.use_media_keys, CONF_GLOBAL),
 #endif
@@ -1697,7 +1697,7 @@ static void read_events(struct input_ctx *ictx, int time)
 static void read_all_events(struct input_ctx *ictx, int time)
 {
     getch2_poll();
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     cocoa_check_events();
 #endif
     read_events(ictx, time);
@@ -2150,7 +2150,7 @@ struct input_ctx *mp_input_init(struct MPOpts *opts)
     }
 #endif
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     if (input_conf->use_ar) {
         cocoa_init_apple_remote();
         ictx->using_ar = true;
@@ -2198,7 +2198,7 @@ void mp_input_uninit(struct input_ctx *ictx)
     if (!ictx)
         return;
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     if (ictx->using_ar) {
         cocoa_uninit_apple_remote();
     }

@@ -88,7 +88,7 @@
 #include "video/out/x11_common.h"
 #endif
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
 #include "osdep/macosx_application.h"
 #endif
 
@@ -614,7 +614,7 @@ static MP_NORETURN void exit_player(struct MPContext *mpctx,
     mp_msg_uninit(mpctx->global);
     talloc_free(mpctx);
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     terminate_cocoa_application();
     // never reach here:
     // terminate calls exit itself, just silence compiler warning
@@ -3912,7 +3912,7 @@ static void init_input(struct MPContext *mpctx)
     // Set the libstream interrupt callback
     stream_set_interrupt_callback(mp_input_check_interrupt, mpctx->input);
 
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     cocoa_set_input_context(mpctx->input);
 #endif
 }
@@ -4737,7 +4737,7 @@ static int mpv_main(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-#ifdef CONFIG_COCOA
+#ifdef HAVE_COCOA
     return cocoa_main(mpv_main, argc, argv);
 #else
     return mpv_main(argc, argv);

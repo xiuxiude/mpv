@@ -851,7 +851,7 @@ struct backend {
 };
 
 static struct backend backends[] = {
-#ifdef CONFIG_GL_COCOA
+#ifdef HAVE_OPENGL_COCOA
     {"cocoa", mpgl_set_backend_cocoa},
 #endif
 #ifdef CONFIG_GL_WIN32
