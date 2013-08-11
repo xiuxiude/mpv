@@ -209,13 +209,17 @@ if HAVE_OPENGL
                  video/out/pnm_loader.c
 endif
 
+if HAVE_OPENGL_COCOA
+  mpv_SOURCES += video/out/gl_cocoa.c
+endif
+
 if HAVE_COCOA
   mpv_SOURCES += video/out/cocoa_common.m osdep/macosx_application.m \
                  osdep/macosx_events.m osdep/ar/HIDRemote.m
 endif
 
 if HAVE_COREVIDEO
-  mpv_SOURCES += video/out/corevideo.c
+  mpv_SOURCES += video/out/vo_corevideo.c
 endif
 
 mpvcore/input/input.c: mpvcore/input/input_conf.h

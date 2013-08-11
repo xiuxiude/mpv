@@ -264,8 +264,8 @@ AX_CC_CHECK([COCOA], [Cocoa Framework (OSX GUI Toolkit)], [
   }
 ])
 AS_IF([test "x$have_cocoa" = "xyes"], [
-  AC_DEFINE([OPENGL], [1], [Define 1 if OpenGL is enabled])
-  AC_DEFINE([OPENGL_COCOA], [1], [Define 1 if OpenGL Cocoa backend is enabled])
+  AC_DEFINE([HAVE_OPENGL], [1], [Define 1 if OpenGL is enabled])
+  AC_DEFINE([HAVE_OPENGL_COCOA], [1], [Define 1 if OpenGL Cocoa backend is enabled])
   AM_CONDITIONAL([HAVE_OPENGL], [true])
   AM_CONDITIONAL([HAVE_OPENGL_COCOA], [true])
 ], [
