@@ -189,32 +189,32 @@ AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xno"], [
 AC_MSG_CHECKING([if libavfilter is usable through vf_lavfi])
 AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
   AS_IF([test "x$have_libavutil_refcounting" = "xyes"], [
-    AC_DEFINE([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [],
+    AC_DEFINE([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [],
               [Define 1 if libavfilter is usable through vf_lavfi])
-    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [true])
+    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [true])
     AC_MSG_RESULT([yes])
   ],[
-    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
+    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
     AC_MSG_RESULT([no (libavutil too old)])
   ])
 ],[
-  AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
+  AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
   AC_MSG_RESULT([no])
 ])
 
 AC_MSG_CHECKING([if libavfilter is usable through af_lavfi])
 AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
   AS_IF([test "x$have_libavutil_opt_set_int_list" = "xyes"], [
-    AC_DEFINE([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [],
+    AC_DEFINE([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [],
               [Define 1 if libavfilter is usable through af_lavfi])
-    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [true])
+    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [true])
     AC_MSG_RESULT([yes])
   ],[
-    AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
+    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
     AC_MSG_RESULT([no (libavutil too old)])
   ])
 ],[
-  AM_CONDITIONAL([LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
+  AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
   AC_MSG_RESULT([no])
 ])
 

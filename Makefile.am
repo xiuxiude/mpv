@@ -171,11 +171,11 @@ if !HAVE_LIBAVUTIL_REFCOUNTING
   mpv_SOURCES += video/decode/lavc_dr1.c
 endif
 
-if LIBAVFILTER_USABLE_WITH_AF_LAVFI
+if HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI
   mpv_SOURCES += audio/filter/af_lavfi.c
 endif
 
-if LIBAVFILTER_USABLE_WITH_VF_LAVFI
+if HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI
   mpv_SOURCES += video/filter/vf_lavfi.c
 endif
 
