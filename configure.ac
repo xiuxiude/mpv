@@ -246,5 +246,48 @@ AS_IF([test "x$with_libquvi4" = "xno"], [
   AM_CONDITIONAL([HAVE_LIBQUVI9], [false])
 ])
 
+# XXX: make all this conditional and based on platform? (will require a LOT
+# of AM_CONDITIONAL hacks..)
+AC_PROG_OBJC([clang])
+AC_LANG_PUSH([Objective C])
+
+AX_STASH_BUILD_FLAGS
+LIBS="$LIBS -framework IOKit -framework Cocoa -framework OpenGL -fobjc-arc"
+AX_CC_CHECK([COCOA], [Cocoa Framework (OSX GUI Toolkit)], [
+  #include <Cocoa/Cocoa.h>
+  #include <CoreServices/CoreServices.h>
+  #include <OpenGL/OpenGL.h>
+  int main(void) {
+    @autoreleasepool {
+      NSApplicationLoad();
+    }
+  }
+])
+AS_IF([test "x$have_cocoa" = "xyes"], [
+  AC_DEFINE([OPENGL], [1], [Define 1 if OpenGL is enabled])
+  AC_DEFINE([OPENGL_COCOA], [1], [Define 1 if OpenGL Cocoa backend is enabled])
+  AM_CONDITIONAL([HAVE_OPENGL], [true])
+  AM_CONDITIONAL([HAVE_OPENGL_COCOA], [true])
+], [
+  AM_CONDITIONAL([HAVE_OPENGL], [false])
+  AM_CONDITIONAL([HAVE_OPENGL_COCOA], [false])
+  AX_POP_BUILD_FLAGS
+])
+AC_LANG_POP([Objective C])
+
+AS_IF([test "x$have_cocoa" = "xyes"], [
+  AX_STASH_BUILD_FLAGS
+  LIBS="$LIBS -framework QuartzCore"
+  AX_CC_CHECK([COREVIDEO], [CoreVideo], [
+    #include <QuartzCore/CoreVideo.h>
+    int main(void) { return 0; }
+  ])
+], [
+  AM_CONDITIONAL([HAVE_COREVIDEO], [false])
+])
+AS_IF([test "x$have_corevideo" = "xno"], [
+  AX_POP_BUILD_FLAGS
+])
+
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])

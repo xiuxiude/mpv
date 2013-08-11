@@ -201,6 +201,23 @@ if HAVE_LIBQUVI9
   mpv_SOURCES += mpvcore/resolve_quvi9.c
 endif
 
+if HAVE_OPENGL
+  mpv_SOURCES += video/out/gl_common.c video/out/gl_osd.c \
+                 video/out/vo_opengl.c video/out/gl_lcms.c \
+                 video/out/gl_video.c video/out/dither.c \
+                 video/out/vo_opengl_old.c \
+                 video/out/pnm_loader.c
+endif
+
+if HAVE_COCOA
+  mpv_SOURCES += video/out/cocoa_common.m osdep/macosx_application.m \
+                 osdep/macosx_events.m osdep/ar/HIDRemote.m
+endif
+
+if HAVE_COREVIDEO
+  mpv_SOURCES += video/out/corevideo.c
+endif
+
 mpvcore/input/input.c: mpvcore/input/input_conf.h
 mpvcore/input/input_conf.h: TOOLS/file2string.pl etc/input.conf
 	./$^ >$@
