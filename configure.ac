@@ -257,7 +257,8 @@ AC_PROG_OBJC([clang])
 AC_LANG_PUSH([Objective C])
 
 AX_STASH_BUILD_FLAGS
-LIBS="$LIBS -framework IOKit -framework Cocoa -framework OpenGL -fobjc-arc"
+LIBS="$LIBS -framework IOKit -framework Cocoa -framework OpenGL"
+OBJCLDFLAGS="-fobjc-arc"
 AX_CC_CHECK([COCOA], [Cocoa Framework (OSX GUI Toolkit)], [
   #include <Cocoa/Cocoa.h>
   #include <CoreServices/CoreServices.h>
@@ -277,6 +278,7 @@ AS_IF([test "x$have_cocoa" = "xyes"], [
   AM_CONDITIONAL([HAVE_OPENGL], [false])
   AM_CONDITIONAL([HAVE_OPENGL_COCOA], [false])
   AX_POP_BUILD_FLAGS
+  OBJCLDFLAGS=""
 ])
 AC_LANG_POP([Objective C])
 
@@ -296,6 +298,8 @@ AX_CC_CHECK_LIBS(
   #include <AudioUnit/AudioUnit.h>
   int main(void) { return 0; }
 ])
+
+LDFLAGS="$LDFLAGS $OBJCLDFLAGS"
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
