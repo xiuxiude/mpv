@@ -185,42 +185,19 @@ AX_CC_CHECK(
         vf_next_query_format();
         return 0;
     }
-  ])
+  ], [ ], [AX_POP_BUILD_FLAGS])
 
-AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xno"], [
-  AX_POP_BUILD_FLAGS
-])
-
-AC_MSG_CHECKING([if libavfilter is usable through vf_lavfi])
 AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
-  AS_IF([test "x$have_libavutil_refcounting" = "xyes"], [
-    AC_DEFINE([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [],
-              [Define 1 if libavfilter is usable through vf_lavfi])
-    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [true])
-    AC_MSG_RESULT([yes])
-  ],[
-    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
-    AC_MSG_RESULT([no (libavutil too old)])
-  ])
-],[
+  AX_CHECK_CONDITION([LIBAVFILTER_USABLE_WITH_VF_LAVFI],
+                     [libavfilter is usable through vf_lavfi],
+                     [test "x$have_libavutil_refcounting" = "xyes"])
+
+  AX_CHECK_CONDITION([LIBAVFILTER_USABLE_WITH_AF_LAVFI],
+                     [libavfilter is usable through af_lavfi],
+                     [test "x$have_libavutil_opt_set_int_list" = "xyes"])
+], [
   AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_VF_LAVFI], [false])
-  AC_MSG_RESULT([no])
-])
-
-AC_MSG_CHECKING([if libavfilter is usable through af_lavfi])
-AS_IF([test "x$have_libavfilter_not_old_or_broken" = "xyes"], [
-  AS_IF([test "x$have_libavutil_opt_set_int_list" = "xyes"], [
-    AC_DEFINE([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [],
-              [Define 1 if libavfilter is usable through af_lavfi])
-    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [true])
-    AC_MSG_RESULT([yes])
-  ],[
-    AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
-    AC_MSG_RESULT([no (libavutil too old)])
-  ])
-],[
   AM_CONDITIONAL([HAVE_LIBAVFILTER_USABLE_WITH_AF_LAVFI], [false])
-  AC_MSG_RESULT([no])
 ])
 
 AX_PKG_ADD([LIBAVDEVICE], [libavdevice >= 54.0.0])
