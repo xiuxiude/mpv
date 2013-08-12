@@ -86,10 +86,9 @@ AX_CHECK_STATEMENT_LIBS(
   ["-lncurses" "-ltinfo" "-ltermcap"], [TERMCAP], [termcap],
   [term.h], [tgetent(0, 0)])
 
-AC_CHECK_HEADERS([termios.h sys/termios.h], [break])
-AS_IF([test "x$ac_cv_header_termios_h" = "xyes" ||
-       test "x$ac_cv_header_sys_termios_h" = "xyes"], [
+AC_CHECK_HEADERS([termios.h sys/termios.h], [
   AC_DEFINE([HAVE_TERMIOS], [1], [Define to 1 if there is termios support])
+  break
 ])
 
 AX_CHECK_STATEMENT(
