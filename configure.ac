@@ -268,27 +268,25 @@ AX_CC_CHECK([COCOA], [Cocoa Framework (OSX GUI Toolkit)], [
       NSApplicationLoad();
     }
   }
-])
-AS_IF([test "x$have_cocoa" = "xyes"], [
+], [
   AC_DEFINE([HAVE_OPENGL], [1], [Define 1 if OpenGL is enabled])
   AC_DEFINE([HAVE_OPENGL_COCOA], [1], [Define 1 if OpenGL Cocoa backend is enabled])
   AM_CONDITIONAL([HAVE_OPENGL], [true])
   AM_CONDITIONAL([HAVE_OPENGL_COCOA], [true])
+
+  AX_CHECK_STATEMENT_LIBS(["-framework QuartzCore"],
+    [COREVIDEO], [CoreVideo],
+    [QuartzCore/CoreVideo.h], [CVBufferRef buffer])
 ], [
   AM_CONDITIONAL([HAVE_OPENGL], [false])
   AM_CONDITIONAL([HAVE_OPENGL_COCOA], [false])
   AX_POP_BUILD_FLAGS
   OBJCLDFLAGS=""
-])
-AC_LANG_POP([Objective C])
 
-AS_IF([test "x$have_cocoa" = "xyes"], [
-  AX_CHECK_STATEMENT_LIBS(["-framework QuartzCore"],
-    [COREVIDEO], [CoreVideo],
-    [QuartzCore/CoreVideo.h], [CVBufferRef buffer])
-], [
   AM_CONDITIONAL([HAVE_COREVIDEO], [false])
 ])
+
+AC_LANG_POP([Objective C])
 
 AX_CC_CHECK_LIBS(
   ["-framework CoreAudio -framework AudioUnit -framework AudioToolbox"],

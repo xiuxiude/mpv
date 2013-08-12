@@ -19,10 +19,12 @@ AC_DEFUN([AX_CHECK_SILENT], [
     [
       AX_CHECK_PASSED([$1], [$2])
       $4
+      $6
     ],
     [
       AX_CHECK_FAILED([$1])
       $5
+      $7
     ]
   )
 ])
@@ -30,7 +32,7 @@ AC_DEFUN([AX_CHECK_SILENT], [
 AC_DEFUN([AX_CC_CHECK_BASE], [
   AC_MSG_CHECKING([for $2])
   AX_CHECK_SILENT(
-    [$1], [$2], [$3], [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no])])
+    [$1], [$2], [$3], [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no])], [$4], [$5])
 ])
 
 AC_DEFUN([AX_CHECK_STATEMENT], [
@@ -38,7 +40,7 @@ AC_DEFUN([AX_CHECK_STATEMENT], [
 ])
 
 AC_DEFUN([AX_CC_CHECK], [
-  AX_CC_CHECK_BASE([$1],[$2],[[AC_LANG_SOURCE([$3])]])
+  AX_CC_CHECK_BASE([$1],[$2],[[AC_LANG_SOURCE([$3])]], [$4], [$5])
 ])
 
 
