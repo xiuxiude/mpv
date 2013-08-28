@@ -53,6 +53,7 @@ struct mpgl_osd *mpgl_osd_init(GL *gl, bool legacy)
     struct mpgl_osd *ctx = talloc_ptrtype(NULL, ctx);
     *ctx = (struct mpgl_osd) {
         .gl = gl,
+        .gl_target = GL_TEXTURE_2D, // user can change this
         .fmt_table = legacy ? osd_to_gl_legacy_formats : osd_to_gl3_formats,
         .scratch = talloc_zero_size(ctx, 1),
     };
@@ -114,7 +115,7 @@ static bool upload_pbo(struct mpgl_osd *ctx, struct mpgl_osd_part *osd,
         packer_copy_subbitmaps(osd->packer, imgs, data, pix_stride, stride);
         if (!gl->UnmapBuffer(GL_PIXEL_UNPACK_BUFFER))
             success = false;
-        glUploadTex(gl, GL_TEXTURE_2D, fmt.format, fmt.type, NULL, stride,
+        glUploadTex(gl, ctx->gl_target, fmt.format, fmt.type, NULL, stride,
                     bb[0].x, bb[0].y, bb[1].x - bb[0].x, bb[1].y - bb[0].y,
                     0);
     }
@@ -135,7 +136,7 @@ static void upload_tex(struct mpgl_osd *ctx, struct mpgl_osd_part *osd,
     if (osd->packer->padding) {
         struct pos bb[2];
         packer_get_bb(osd->packer, bb);
-        glClearTex(ctx->gl, GL_TEXTURE_2D, fmt.format, fmt.type,
+        glClearTex(ctx->gl, ctx->gl_target, fmt.format, fmt.type,
                    bb[0].x, bb[0].y, bb[1].x - bb[0].y, bb[1].y - bb[0].y,
                    0, &ctx->scratch);
     }
@@ -143,7 +144,7 @@ static void upload_tex(struct mpgl_osd *ctx, struct mpgl_osd_part *osd,
         struct sub_bitmap *s = &imgs->parts[n];
         struct pos p = osd->packer->result[n];
 
-        glUploadTex(ctx->gl, GL_TEXTURE_2D, fmt.format, fmt.type,
+        glUploadTex(ctx->gl, ctx->gl_target, fmt.format, fmt.type,
                     s->bitmap, s->stride, p.x, p.y, s->w, s->h, 0);
     }
 }
@@ -169,7 +170,7 @@ static bool upload_osd(struct mpgl_osd *ctx, struct mpgl_osd_part *osd,
     if (!osd->texture)
         gl->GenTextures(1, &osd->texture);
 
-    gl->BindTexture(GL_TEXTURE_2D, osd->texture);
+    gl->BindTexture(ctx->gl_target, osd->texture);
 
     if (osd->packer->w > osd->w || osd->packer->h > osd->h
         || osd->format != imgs->format)
@@ -178,13 +179,13 @@ static bool upload_osd(struct mpgl_osd *ctx, struct mpgl_osd_part *osd,
         osd->w = FFMAX(32, osd->packer->w);
         osd->h = FFMAX(32, osd->packer->h);
 
-        gl->TexImage2D(GL_TEXTURE_2D, 0, fmt.internal_format, osd->w, osd->h,
+        gl->TexImage2D(ctx->gl_target, 0, fmt.internal_format, osd->w, osd->h,
                        0, fmt.format, fmt.type, NULL);
 
-        gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        gl->TexParameteri(ctx->gl_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        gl->TexParameteri(ctx->gl_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        gl->TexParameteri(ctx->gl_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl->TexParameteri(ctx->gl_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         if (gl->DeleteBuffers)
             gl->DeleteBuffers(1, &osd->buffer);
@@ -197,7 +198,7 @@ static bool upload_osd(struct mpgl_osd *ctx, struct mpgl_osd_part *osd,
     if (!uploaded)
         upload_tex(ctx, osd, imgs);
 
-    gl->BindTexture(GL_TEXTURE_2D, 0);
+    gl->BindTexture(ctx->gl_target, 0);
 
     return true;
 }
@@ -228,7 +229,7 @@ void mpgl_osd_set_gl_state(struct mpgl_osd *ctx, struct mpgl_osd_part *p)
 {
     GL *gl = ctx->gl;
 
-    gl->BindTexture(GL_TEXTURE_2D, p->texture);
+    gl->BindTexture(ctx->gl_target, p->texture);
     gl->Enable(GL_BLEND);
     gl->BlendFunc(blend_factors[p->format][0], blend_factors[p->format][1]);
 }
@@ -238,7 +239,7 @@ void mpgl_osd_unset_gl_state(struct mpgl_osd *ctx, struct mpgl_osd_part *p)
     GL *gl = ctx->gl;
 
     gl->Disable(GL_BLEND);
-    gl->BindTexture(GL_TEXTURE_2D, 0);
+    gl->BindTexture(ctx->gl_target, 0);
 }
 
 static void reset(struct mpgl_osd *ctx)
