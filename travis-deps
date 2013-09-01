@@ -40,7 +40,7 @@ class TravisDepsBuilder
     sh "cd $TRAVIS_BUILD_DIR"
   end
 
-  def configue
+  def configure
     "./configure"
   end
 
