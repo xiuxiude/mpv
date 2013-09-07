@@ -228,6 +228,32 @@ AS_IF([test "x$with_libquvi4" = "xno"], [
   AM_CONDITIONAL([HAVE_LIBQUVI9], [false])
 ])
 
+AX_CC_CHECK_LIBS([-lole32],[WASAPI],[WASAPI],[
+#define COBJMACROS 1
+#define _WIN32_WINNT 0x600
+#include <initguid.h>
+#include <mmdeviceapi.h>
+#include <audioclient.h>
+#include <endpointvolume.h>
+
+int main(void) {
+    const GUID *check[[]] = {
+      &IID_IAudioClient,
+      &IID_IAudioRenderClient,
+      &IID_IAudioEndpointVolume,
+    };
+    (void)check[[0]];
+
+    CoInitialize(NULL);
+    IMMDeviceEnumerator *e;
+    CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
+                     &IID_IMMDeviceEnumerator, (void **)&e);
+    IMMDeviceEnumerator_Release(e);
+    CoUninitialize();
+}
+])
+AM_COND_IF([HAVE_WASAPI],[AC_DEFINE([CONFIG_WASAPI],[1],[Define to 1 if WASAPI is enabled (compat with old build system)])])
+
 # XXX: make all this conditional and based on platform? (will require a LOT
 # of AM_CONDITIONAL hacks..)
 AC_PROG_OBJC([clang])

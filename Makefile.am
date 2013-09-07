@@ -205,6 +205,10 @@ if HAVE_LIBQUVI9
   mpv_SOURCES += mpvcore/resolve_quvi9.c
 endif
 
+if HAVE_WASAPI
+  mpv_SOURCES += audio/out/ao_wasapi.c
+endif
+
 if HAVE_OPENGL
   mpv_SOURCES += video/out/gl_common.c video/out/gl_osd.c \
                  video/out/vo_opengl.c video/out/gl_lcms.c \
