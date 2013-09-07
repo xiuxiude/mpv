@@ -215,6 +215,10 @@ if HAVE_OPENGL
                  video/out/gl_video.c video/out/dither.c \
                  video/out/vo_opengl_old.c \
                  video/out/pnm_loader.c
+
+if OS_WINDOWS
+  mpv_SOURCES += video/out/w32_common.c video/out/gl_w32.c
+endif
 endif
 
 if HAVE_OPENGL_COCOA
