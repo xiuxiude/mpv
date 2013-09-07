@@ -1,6 +1,5 @@
 AC_DEFUN([AX_SETUP_WINDOWS], [
   AC_SUBST([osdep_timer], [timer-win2])
-  AC_DEFINE([HAVE_DOS_PATHS], [1], [Use DOS paths])
   AC_DEFINE([CONFIG_PRIORITY], [1], [Process priority])
   CFLAGS="$CFLAGS -fno-common"
   LIBS="$LIBS -lwinmm"
@@ -15,6 +14,7 @@ AC_DEFUN([AX_OSDEP], [
     [*mingw32*], [
       AC_SUBST([osdep_getch], [getch2-win])
       AX_SETUP_WINDOWS
+      AC_DEFINE([HAVE_DOS_PATHS], [1], [Use DOS paths])
       CFLAGS="$CFLAGS -D__USE_MINGW_ANSI_STDIO=1"
       # Hack for missing BYTE_ORDER declarations in <sys/types.h>.
       # For some reason, they are in <sys/param.h>, but we don't bother
