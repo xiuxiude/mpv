@@ -151,6 +151,10 @@ mpv_SOURCES = \
     video/out/vo_null.c \
     video/out/vo_image.c
 
+if CONFIG_PRIORITY
+  mpv_SOURCES += osdep/priority.c
+endif
+
 if HAVE_SYS_MMAN_H
   mpv_SOURCES += audio/filter/af_export.c
 endif

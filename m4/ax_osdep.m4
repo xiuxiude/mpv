@@ -1,7 +1,7 @@
 AC_DEFUN([AX_SETUP_WINDOWS], [
-  AC_SUBST([osdep_timer], [timer-win32])
-  AC_DEFINE([HAVE_DOS_PATHS], [], [Use DOS paths])
-  AC_DEFINE([CONFIG_PRIORITY], [], [Process priority])
+  AC_SUBST([osdep_timer], [timer-win2])
+  AC_DEFINE([HAVE_DOS_PATHS], [1], [Use DOS paths])
+  AC_DEFINE([CONFIG_PRIORITY], [1], [Process priority])
   CFLAGS="$CFLAGS -fno-common"
   LIBS="$LIBS -lwinmm"
   windows="yes"
@@ -33,4 +33,5 @@ AC_DEFUN([AX_OSDEP], [
     [*freebsd*], [],
     [*netbsd*],  [],
   )
+  AM_CONDITIONAL([CONFIG_PRIORITY], [test "x$windows" = "xyes"])
 ])
