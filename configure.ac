@@ -23,7 +23,7 @@ configure_flags="$*"
 
 AC_CONFIG_SRCDIR([mpvcore/mplayer.c])
 AC_CONFIG_HEADERS([config.h])
-AM_INIT_AUTOMAKE([1.11 foreign subdir-objects dist-xz silent-rules])
+AM_INIT_AUTOMAKE([1.13 foreign subdir-objects dist-xz silent-rules])
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
