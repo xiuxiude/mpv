@@ -228,101 +228,12 @@ AS_IF([test "x$with_libquvi4" = "xno"], [
   AM_CONDITIONAL([HAVE_LIBQUVI9], [false])
 ])
 
-AX_CC_CHECK_LIBS([-lole32],[WASAPI],[WASAPI],[
-#define COBJMACROS 1
-#define _WIN32_WINNT 0x600
-#include <initguid.h>
-#include <mmdeviceapi.h>
-#include <audioclient.h>
-#include <endpointvolume.h>
-
-int main(void) {
-    const GUID *check[[]] = {
-      &IID_IAudioClient,
-      &IID_IAudioRenderClient,
-      &IID_IAudioEndpointVolume,
-    };
-    (void)check[[0]];
-
-    CoInitialize(NULL);
-    IMMDeviceEnumerator *e;
-    CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
-                     &IID_IMMDeviceEnumerator, (void **)&e);
-    IMMDeviceEnumerator_Release(e);
-    CoUninitialize();
-}
-])
-AM_COND_IF([HAVE_WASAPI],[AC_DEFINE([CONFIG_WASAPI],[1],[Define to 1 if WASAPI is enabled (compat with old build system)])])
-
-# XXX: make all this conditional and based on platform? (will require a LOT
-# of AM_CONDITIONAL hacks..)
-AC_PROG_OBJC([clang])
-AC_LANG_PUSH([Objective C])
-
-# XXX: AM_COND_IF does not "conditionalize" AC_PROG_OBJC
-# we check it before so the configure output looks less weird :P
+# XXX: AC_PROG_OBJC needs to be called from toplevel to avoid expanded-before-required errors
+# Not only is it an annoying warning, but the "premature expansion" ignores the [clang] argument
 AC_PROG_OBJC([clang])
 
-AC_MSG_CHECKING([if building for Darwin (OS X)])
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-#if !defined(__APPLE__) || !defined(__MACH__)
-#error Not Darwin
-#endif
-])],[os_darwin=yes],[os_darwin=no])
-AM_CONDITIONAL([OS_DARWIN], [test "x$os_darwin" = "xyes"])
-AC_MSG_RESULT([$os_darwin])
-
-AM_COND_IF([OS_DARWIN],[
-    AC_LANG_PUSH([Objective C])
-
-    AX_STASH_BUILD_FLAGS
-    LIBS="$LIBS -framework IOKit -framework Cocoa -framework OpenGL"
-    OBJCLDFLAGS="-fobjc-arc"
-    AX_CC_CHECK([COCOA], [Cocoa Framework (OSX GUI Toolkit)], [
-      #include <Cocoa/Cocoa.h>
-      #include <CoreServices/CoreServices.h>
-      #include <OpenGL/OpenGL.h>
-      int main(void) {
-        @autoreleasepool {
-          NSApplicationLoad();
-        }
-      }
-    ], [
-      have_opengl=yes
-      have_opengl_cocoa=yes
-
-      AX_CHECK_STATEMENT_LIBS(["-framework QuartzCore"],
-        [COREVIDEO], [CoreVideo],
-        [QuartzCore/CoreVideo.h], [CVBufferRef buffer])
-    ], [
-      AX_POP_BUILD_FLAGS
-      OBJCLDFLAGS=""
-    ])
-
-    AC_LANG_POP([Objective C])
-
-    AX_CC_CHECK_LIBS(
-      ["-framework CoreAudio -framework AudioUnit -framework AudioToolbox"],
-      [COREAUDIO], [CoreAudio], [
-      #include <CoreAudio/CoreAudio.h>
-      #include <AudioToolbox/AudioToolbox.h>
-      #include <AudioUnit/AudioUnit.h>
-      int main(void) { return 0; }
-    ])
-
-    LDFLAGS="$LDFLAGS $OBJCLDFLAGS"
-])
-
-AM_CONDITIONAL([HAVE_COCOA],[test "x$have_cocoa" = "xyes"])
-
-AM_CONDITIONAL([HAVE_OPENGL],[test "x$have_opengl" = "xyes"])
-AM_COND_IF([HAVE_OPENGL],[AC_DEFINE([HAVE_OPENGL], [1], [Define 1 if OpenGL is enabled])])
-
-AM_CONDITIONAL([HAVE_OPENGL_COCOA], [test "x$have_opengl_cocoa" = "xyes"])
-AM_COND_IF([HAVE_OPENGL_COCOA],[AC_DEFINE([HAVE_OPENGL_COCOA], [1], [Define 1 if OpenGL Cocoa backend is enabled])])
-
-AM_CONDITIONAL([HAVE_COREVIDEO],[test "x$have_corevideo" = "xyes"])
-AM_CONDITIONAL([HAVE_COREAUDIO],[test "x$have_coreaudio" = "xyes"])
+OS_DARWIN_CHECKS
+OS_WINDOWS_CHECKS
 
 AC_MSG_CHECKING([whether encoding is enabled])
 AC_ARG_ENABLE([encoding],
