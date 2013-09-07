@@ -75,7 +75,7 @@ AX_CHECK_CONDITION([STREAM_CACHE], [stream cache],
 AX_ICONV
 # XXX: add gettext tests
 
-AC_CHECK_HEADERS([soundcard.h sys/soundcard.h], [break])
+AC_CHECK_HEADERS([sys/soundcard.h soundcard.h], [break])
 AC_CHECK_HEADERS([sys/videoio.h])
 
 AX_CHECK_STATEMENT_LIBS(
