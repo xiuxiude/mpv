@@ -236,6 +236,11 @@ if HAVE_COREAUDIO
                  audio/out/ao_coreaudio_properties.c
 endif
 
+if CONFIG_ENCODING
+  mpv_SOURCES += video/out/vo_lavc.c audio/out/ao_lavc.c \
+                 mpvcore/encode_lavc.c
+endif
+
 mpvcore/input/input.c: mpvcore/input/input_conf.h
 mpvcore/input/input_conf.h: TOOLS/file2string.pl etc/input.conf
 	./$^ >$@

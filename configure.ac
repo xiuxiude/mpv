@@ -324,5 +324,14 @@ AM_COND_IF([HAVE_OPENGL_COCOA],[AC_DEFINE([HAVE_OPENGL_COCOA], [1], [Define 1 if
 AM_CONDITIONAL([HAVE_COREVIDEO],[test "x$have_corevideo" = "xyes"])
 AM_CONDITIONAL([HAVE_COREAUDIO],[test "x$have_coreaudio" = "xyes"])
 
+AC_MSG_CHECKING([whether encoding is enabled])
+AC_ARG_ENABLE([encoding],
+  [AS_HELP_STRING([--disable-encoding], [disable support for encoding])])
+AM_CONDITIONAL([CONFIG_ENCODING],[test "x$enable_encoding" != "xno"])
+AM_COND_IF([CONFIG_ENCODING],[
+  enable_encoding=yes
+  AC_DEFINE([CONFIG_ENCODING],[1],[Define to 1 if encoding is supported (compat)])])
+AC_MSG_RESULT([$enable_encoding])
+
 AC_CONFIG_MACRO_DIR([m4])
 AC_OUTPUT([Makefile])
