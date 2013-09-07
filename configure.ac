@@ -79,7 +79,7 @@ AC_CHECK_HEADERS([sys/soundcard.h soundcard.h], [break])
 AC_CHECK_HEADERS([sys/videoio.h])
 
 AX_CHECK_STATEMENT_LIBS(
-  ["-lncurses" "-lncursesw"], [TERMINFO], [terminfo],
+  ["-lncurses" "-lncursesw" "-ltinfo"], [TERMINFO], [terminfo],
   [term.h], [setupterm(0, 1, 0)])
 
 AX_CHECK_STATEMENT_LIBS(
